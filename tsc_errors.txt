@@ -1,0 +1,3 @@
+src/app/watchlist/page.tsx(106,60): error TS2322: Type 'Movie[] | { id: string; title: string; poster: string; type: any; description: string; backdrop: string; rating: string; year: string; quality: string; }[]' is not assignable to type 'Movie[]'.
+  Type '{ id: string; title: string; poster: string; type: any; description: string; backdrop: string; rating: string; year: string; quality: string; }[]' is not assignable to type 'Movie[]'.
+    Property 'isNSFW' is missing in type '{ id: string; title: string; poster: string; type: any; description: string; backdrop: string; rating: string; year: string; quality: string; }' but required in type 'Movie'.
