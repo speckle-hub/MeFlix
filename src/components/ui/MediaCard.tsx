@@ -92,10 +92,10 @@ export default function MediaCard({ movie, index }: MediaCardProps) {
                     whileHover={{ scale: 1.2, backgroundColor: "rgba(239, 68, 68, 0.8)" }}
                     whileTap={{ scale: 0.9 }}
                     onClick={handleRemoveProgress}
-                    className="absolute -right-2 -top-2 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white shadow-xl backdrop-blur-md border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    className="absolute -right-1 -top-1 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-red-500 text-white shadow-2xl backdrop-blur-md border border-white/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200"
                     title="Remove from history"
                 >
-                    <X className="h-4 w-4" />
+                    <X className="h-6 w-6" />
                 </motion.button>
             )}
 
@@ -126,24 +126,24 @@ export default function MediaCard({ movie, index }: MediaCardProps) {
                     />
 
                     {/* Overlay Actions */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
                         <div className="flex items-center justify-between mb-2">
                             <motion.div
                                 whileHover={{ scale: 1.1 }}
-                                className="h-10 w-10 rounded-full bg-accent flex items-center justify-center text-white shadow-lg shadow-accent/40"
+                                className="h-14 w-14 rounded-full bg-accent flex items-center justify-center text-white shadow-lg shadow-accent/40"
                             >
-                                <Play className="h-5 w-5 fill-current ml-1" />
+                                <Play className="h-7 w-7 fill-current ml-1" />
                             </motion.div>
 
                             <div className="flex gap-2">
                                 <button
                                     onClick={handleWatchlist}
                                     className={cn(
-                                        "h-8 w-8 rounded-full flex items-center justify-center transition-all border",
+                                        "h-12 w-12 rounded-full flex items-center justify-center transition-all border",
                                         isAdded ? "bg-white text-black border-white" : "bg-black/40 text-white border-white/20 hover:bg-black/60"
                                     )}
                                 >
-                                    {isAdded ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                                    {isAdded ? <Check className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
                                 </button>
                             </div>
                         </div>

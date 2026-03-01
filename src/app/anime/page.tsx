@@ -4,14 +4,19 @@ import ContentGrid from "@/components/ui/ContentGrid";
 import FilterBar from "@/components/ui/FilterBar";
 import { useCatalog } from "@/hooks/useCatalog";
 import { PlaySquare } from "lucide-react";
+import PullToRefresh from "@/components/ui/PullToRefresh";
+
 
 import { Suspense } from "react";
 
 export default function AnimePage() {
     return (
         <Suspense fallback={<div>Loading Anime...</div>}>
-            <AnimeContent />
+            <PullToRefresh onRefresh={async () => { await new Promise(r => setTimeout(r, 1000)); window.location.reload(); }}>
+                <AnimeContent />
+            </PullToRefresh>
         </Suspense>
+
     );
 }
 

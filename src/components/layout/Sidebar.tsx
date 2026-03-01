@@ -28,7 +28,7 @@ export default function Sidebar() {
         : BASE_NAV_ITEMS;
 
     return (
-        <aside className="fixed left-0 top-0 hidden h-full w-64 flex-col border-r border-white/5 bg-background p-6 lg:flex">
+        <aside className="fixed left-0 top-0 hidden h-full w-64 flex-col border-r border-white/5 bg-background p-6 md:flex">
             <div className="mb-10 flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-white font-bold text-xl">
                     M

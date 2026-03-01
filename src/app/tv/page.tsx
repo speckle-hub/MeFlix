@@ -4,14 +4,19 @@ import ContentGrid from "@/components/ui/ContentGrid";
 import FilterBar from "@/components/ui/FilterBar";
 import { useCatalog } from "@/hooks/useCatalog";
 import { Tv } from "lucide-react";
+import PullToRefresh from "@/components/ui/PullToRefresh";
+
 
 import { Suspense } from "react";
 
 export default function TVShowsPage() {
     return (
         <Suspense fallback={<div>Loading Series...</div>}>
-            <TVShowsContent />
+            <PullToRefresh onRefresh={async () => { await new Promise(r => setTimeout(r, 1000)); window.location.reload(); }}>
+                <TVShowsContent />
+            </PullToRefresh>
         </Suspense>
+
     );
 }
 

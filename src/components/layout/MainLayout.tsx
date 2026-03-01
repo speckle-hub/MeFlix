@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
-import MobileNav from "./MobileNav";
+import BottomNav from "./BottomNav";
+import MobileHeader from "./MobileHeader";
 import PageTransition from "./PageTransition";
 import SearchModal from "../ui/SearchModal";
 import { cn } from "@/lib/utils";
@@ -47,17 +48,20 @@ export default function MainLayout({ children }: MainLayoutProps) {
     return (
         <div className="flex min-h-screen flex-col bg-background text-white">
             <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+
+            <MobileHeader />
+
             {/* Desktop Sidebar with scroll-responsive border */}
             <div className={cn(
-                "fixed left-0 top-0 z-40 h-full w-64 transition-all duration-300",
+                "fixed left-0 top-0 z-40 h-full w-64 transition-all duration-300 hidden md:block",
                 isScrolled ? "border-r border-white/10" : "border-r border-transparent"
             )}>
                 <Sidebar />
             </div>
 
             {/* Main Content Area */}
-            <main className="flex-1 transition-all duration-300 lg:ml-64">
-                <div className="mx-auto w-full max-w-(--breakpoint-2xl) p-4 pb-24 lg:p-8">
+            <main className="flex-1 transition-all duration-300 md:ml-64 pt-16 md:pt-0 pb-24 md:pb-0">
+                <div className="mx-auto w-full max-w-(--breakpoint-2xl) p-4 md:p-8">
                     <PageTransition>
                         {children}
                     </PageTransition>
@@ -65,7 +69,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             </main>
 
             {/* Mobile Bottom Navigation */}
-            <MobileNav />
+            <BottomNav />
         </div>
     );
 }

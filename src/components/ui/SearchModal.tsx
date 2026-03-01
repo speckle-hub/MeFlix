@@ -158,7 +158,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] px-4 backdrop-blur-xl bg-black/60">
+                <div className="fixed inset-0 z-[100] flex items-start justify-center backdrop-blur-3xl bg-background/95 lg:bg-black/60 lg:backdrop-blur-xl lg:pt-[10vh] lg:px-4">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -169,10 +169,10 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                         onDragEnd={(_, info) => {
                             if (info.offset.y > 100) onClose();
                         }}
-                        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-surface shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)]"
+                        className="w-full h-full lg:h-auto lg:max-w-2xl overflow-hidden lg:rounded-3xl border-white/10 bg-surface shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] flex flex-col pt-[env(safe-area-inset-top)]"
                     >
                         {/* Search Input */}
-                        <div className="relative flex items-center border-b border-white/5 p-6">
+                        <div className="relative flex items-center border-b border-white/5 p-6 min-h-[5rem]">
                             <Search className="h-6 w-6 text-text-muted" />
                             <input
                                 ref={inputRef}
@@ -180,21 +180,21 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder="Search movies, TV shows, or anime..."
-                                className="flex-1 bg-transparent px-4 text-lg font-medium text-white placeholder:text-text-muted focus:outline-none"
+                                className="flex-1 bg-transparent px-4 text-xl font-bold text-white placeholder:text-text-muted focus:outline-none"
                             />
-                            <div className="flex items-center gap-2 rounded-lg bg-white/5 px-2 py-1 text-[10px] font-bold text-text-muted uppercase tracking-wider border border-white/5">
+                            <div className="hidden lg:flex items-center gap-2 rounded-lg bg-white/5 px-2 py-1 text-[10px] font-bold text-text-muted uppercase tracking-wider border border-white/5">
                                 <Command className="h-3 w-3" /> K
                             </div>
                             <button
                                 onClick={onClose}
-                                className="ml-4 rounded-full p-2 text-text-muted hover:bg-white/5 hover:text-white transition-all"
+                                className="ml-4 rounded-full p-2 text-text-muted hover:bg-white/5 hover:text-white transition-all bg-white/5 lg:bg-transparent"
                             >
-                                <X className="h-5 w-5" />
+                                <X className="h-6 w-6 lg:h-5 lg:w-5" />
                             </button>
                         </div>
 
                         {/* Content Area */}
-                        <div className="max-h-[60vh] overflow-y-auto p-6 scrollbar-hide">
+                        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
                             {loading && !results.movies.length && (
                                 <div className="flex flex-col items-center justify-center py-12 gap-4">
                                     <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -202,27 +202,56 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                                 </div>
                             )}
 
-                            {/* Recent History */}
-                            {!query && history.length > 0 && (
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-xs font-bold uppercase tracking-widest text-text-muted flex items-center gap-2">
-                                            <Clock className="h-3 w-3" /> Recent Searches
+                            {/* Recommendations / History */}
+                            {!query && (
+                                <div className="space-y-10">
+                                    {/* Recent History */}
+                                    {history.length > 0 && (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between px-1">
+                                                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-text-muted flex items-center gap-2">
+                                                    <Clock className="h-4 w-4" /> Recent
+                                                </h3>
+                                                <button onClick={clearHistory} className="text-[10px] font-bold text-accent uppercase tracking-wider hover:underline">
+                                                    Clear All
+                                                </button>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 text-sm">
+                                                {history.map((h) => (
+                                                    <button
+                                                        key={h}
+                                                        onClick={() => setQuery(h)}
+                                                        className="rounded-2xl bg-white/5 px-5 py-3 text-white hover:bg-white/10 transition-all border border-white/5 font-medium"
+                                                    >
+                                                        {h}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Trending / Recommended */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-text-muted flex items-center gap-2 px-1">
+                                            Trending Now
                                         </h3>
-                                        <button onClick={clearHistory} className="text-[10px] font-bold text-accent uppercase tracking-wider hover:underline">
-                                            Clear
-                                        </button>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 text-sm">
-                                        {history.map((h) => (
-                                            <button
-                                                key={h}
-                                                onClick={() => setQuery(h)}
-                                                className="rounded-xl glass px-4 py-2 text-white hover:bg-white/10 transition-all border border-white/5"
-                                            >
-                                                {h}
-                                            </button>
-                                        ))}
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {["Deadpool & Wolverine", "Inside Out 2", "The Boys", "House of the Dragon"].map((item) => (
+                                                <button
+                                                    key={item}
+                                                    onClick={() => setQuery(item)}
+                                                    className="flex items-center justify-between rounded-2xl bg-white/5 p-4 text-white hover:bg-white/10 transition-all border border-white/5 group"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="h-10 w-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
+                                                            <Search className="h-5 w-5" />
+                                                        </div>
+                                                        <span className="font-bold">{item}</span>
+                                                    </div>
+                                                    <ArrowRight className="h-5 w-5 text-text-muted group-hover:text-accent transition-colors" />
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -230,12 +259,12 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                             {/* No Results */}
                             {query && !loading && !results.movies.length && !results.series.length && !results.anime.length && (
                                 <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-                                    <div className="h-16 w-16 rounded-3xl bg-surface-hover flex items-center justify-center text-text-muted">
-                                        <Search className="h-8 w-8" />
+                                    <div className="h-20 w-20 rounded-3xl bg-surface-hover flex items-center justify-center text-text-muted">
+                                        <Search className="h-10 w-10" />
                                     </div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-white">No results found</h3>
-                                        <p className="text-sm text-text-muted">Try searching for something else or check your addons.</p>
+                                    <div className="space-y-2">
+                                        <h3 className="text-xl font-bold text-white">No results found</h3>
+                                        <p className="text-sm text-text-muted max-w-xs mx-auto">Try searching for something else or check your installed addons.</p>
                                     </div>
                                 </div>
                             )}
@@ -248,15 +277,15 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                             </div>
                         </div>
 
-                        {/* Footer */}
-                        <div className="border-t border-white/5 bg-surface-hover/50 p-4 px-6">
+                        {/* Footer - Only on Desktop */}
+                        <div className="hidden lg:block border-t border-white/5 bg-surface-hover/50 p-4 px-6">
                             <div className="flex items-center justify-between text-[11px] font-medium text-text-muted">
                                 <div className="flex gap-4">
                                     <span className="flex items-center gap-1"><kbd className="bg-white/5 px-1 rounded border border-white/10 italic">Enter</kbd> to select</span>
                                     <span className="flex items-center gap-1"><kbd className="bg-white/5 px-1 rounded border border-white/10 italic">Esc</kbd> to close</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-accent">
-                                    Aggregate search powered by MeFlix Addon Engine
+                                <div className="flex items-center gap-2 text-accent uppercase tracking-widest font-black text-[9px]">
+                                    Unified MeFlix Search
                                 </div>
                             </div>
                         </div>

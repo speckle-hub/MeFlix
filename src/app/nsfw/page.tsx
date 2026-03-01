@@ -11,6 +11,8 @@ import { ShieldAlert, Lock, Search, X, AlertTriangle, Play } from "lucide-react"
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+import PullToRefresh from "@/components/ui/PullToRefresh";
+
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
 function SkeletonCard() {
     return (
@@ -398,77 +400,79 @@ export default function NSFWPage() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-4"
-            >
-                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
-                    <ShieldAlert className="w-6 h-6 text-rose-400" />
-                </div>
-                <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">Adult Content</h1>
-                    <p className="text-white/40 text-sm mt-0.5">Browse premium adult content from your installed addons</p>
-                </div>
-            </motion.div>
-
-            {/* Tab Bar */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
-                className="flex gap-1 p-1 bg-white/5 rounded-2xl w-fit border border-white/10"
-            >
-                {tabs.map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={cn(
-                            "relative px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
-                            activeTab === tab.id
-                                ? "bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.4)]"
-                                : "text-white/50 hover:text-white hover:bg-white/5"
-                        )}
-                    >
-                        {tab.label}
-                        {tab.count > 0 && (
-                            <span className={cn(
-                                "ml-2 text-xs px-1.5 py-0.5 rounded-full",
-                                activeTab === tab.id
-                                    ? "bg-white/20 text-white"
-                                    : "bg-white/10 text-white/40"
-                            )}>
-                                {tab.count}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </motion.div>
-
-            {/* Content Area */}
-            <AnimatePresence mode="wait">
+        <PullToRefresh onRefresh={async () => { await new Promise(r => setTimeout(r, 1000)); window.location.reload(); }}>
+            <div className="space-y-6">
+                {/* Header */}
                 <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2 }}
+                    className="flex items-center gap-4"
                 >
-                    {activeTab === "adult" ? (
-                        <ContentTab
-                            addons={adultAddons.map(a => ({ url: a.url, name: a.name, manifest: a.manifest, isEnabled: a.isEnabled }))}
-                            emptyMessage="No adult content addons installed or enabled."
-                        />
-                    ) : (
-                        <ContentTab
-                            addons={hentaiAddons.map(a => ({ url: a.url, name: a.name, manifest: a.manifest, isEnabled: a.isEnabled }))}
-                            emptyMessage="No hentai content addons installed or enabled."
-                        />
-                    )}
+                    <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
+                        <ShieldAlert className="w-6 h-6 text-rose-400" />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-bold text-white tracking-tight">Adult Content</h1>
+                        <p className="text-white/40 text-sm mt-0.5">Browse premium adult content from your installed addons</p>
+                    </div>
                 </motion.div>
-            </AnimatePresence>
-        </div>
+
+                {/* Tab Bar */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="flex gap-1 p-1 bg-white/5 rounded-2xl w-fit border border-white/10"
+                >
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={cn(
+                                "relative px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
+                                activeTab === tab.id
+                                    ? "bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.4)]"
+                                    : "text-white/50 hover:text-white hover:bg-white/5"
+                            )}
+                        >
+                            {tab.label}
+                            {tab.count > 0 && (
+                                <span className={cn(
+                                    "ml-2 text-xs px-1.5 py-0.5 rounded-full",
+                                    activeTab === tab.id
+                                        ? "bg-white/20 text-white"
+                                        : "bg-white/10 text-white/40"
+                                )}>
+                                    {tab.count}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </motion.div>
+
+                {/* Content Area */}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        {activeTab === "adult" ? (
+                            <ContentTab
+                                addons={adultAddons.map(a => ({ url: a.url, name: a.name, manifest: a.manifest, isEnabled: a.isEnabled }))}
+                                emptyMessage="No adult content addons installed or enabled."
+                            />
+                        ) : (
+                            <ContentTab
+                                addons={hentaiAddons.map(a => ({ url: a.url, name: a.name, manifest: a.manifest, isEnabled: a.isEnabled }))}
+                                emptyMessage="No hentai content addons installed or enabled."
+                            />
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+        </PullToRefresh>
     );
 }

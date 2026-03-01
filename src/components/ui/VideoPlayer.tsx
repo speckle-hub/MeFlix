@@ -15,6 +15,9 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { toast } from "sonner";
 import Hls from 'hls.js';
 import { SeasonSelector } from "./SeasonSelector";
+import { useSettingsStore } from "@/store/settingsStore";
+import { Drawer } from "vaul";
+import { Sun, Volume2 as VolIcon, FastForward, Rewind } from "lucide-react";
 
 interface VideoPlayerProps {
     url: string;
@@ -50,11 +53,14 @@ export default function VideoPlayer({
     const { preferences } = useProfileStore();
     const { light, success: hapticSuccess } = useHaptics();
 
+    const { gesturesEnabled, setGesturesEnabled } = useSettingsStore();
+
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [volume, setVolume] = useState(1);
-    const [isMuted, setIsMuted] = useState(true); // Start muted for autoplay policy
+    const [brightness, setBrightness] = useState(100);
+    const [isMuted, setIsMuted] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showControls, setShowControls] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +68,23 @@ export default function VideoPlayer({
     const [playbackRate, setPlaybackRate] = useState(preferences.defaultPlaybackSpeed || 1);
     const [streamError, setStreamError] = useState<string | null>(null);
     const [isReconnecting, setIsReconnecting] = useState(false);
+
+    // Gesture States
+    const [activeGesture, setActiveGesture] = useState<'volume' | 'brightness' | 'seek' | null>(null);
+    const [gestureValue, setGestureValue] = useState<number>(0);
+    const [seekPreview, setSeekPreview] = useState<number | null>(null);
+    const [ripple, setRipple] = useState<{ x: number, y: number, side: 'left' | 'right' } | null>(null);
+
+    const gestureRef = useRef({
+        startX: 0,
+        startY: 0,
+        startValue: 0,
+        isThrottled: false,
+        startTime: 0,
+        lastTap: 0,
+        didGesture: false   // tracks if a swipe gesture actually fired
+    });
+
     const controlsTimeoutRef = useRef<NodeJS.Timeout>(null);
 
     // HLS Initialization & Management
@@ -417,398 +440,571 @@ export default function VideoPlayer({
     };
 
     return (
-        <div
-            className={cn(
-                "relative w-full overflow-hidden bg-black group",
-                isFullscreen ? "fixed inset-0 z-[200] rounded-none" : "aspect-video rounded-3xl"
-            )}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={() => setShowControls(false)}
-            style={{ cursor: showControls ? 'default' : 'none' }}
-        >
-            <video
-                ref={videoRef}
-                className="h-full w-full"
-                onClick={() => {
-                    handleFirstInteraction();
-                    togglePlay();
-                }}
-                onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={handleLoadedMetadata}
-                onWaiting={() => setIsLoading(true)}
-                onPlaying={() => setIsLoading(false)}
-                muted={isMuted}
-                playsInline
-            />
-
-            {/* Reconnecting Overlay */}
-            <AnimatePresence>
-                {isReconnecting && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm"
-                    >
-                        <Loader2 className="w-12 h-12 animate-spin text-red-600 mb-4" />
-                        <span className="text-white font-black tracking-widest uppercase">Reconnecting to Live Stream...</span>
-                    </motion.div>
+        <>
+            <div
+                className={cn(
+                    "relative w-full overflow-hidden bg-black group",
+                    isFullscreen ? "fixed inset-0 z-[200] rounded-none" : "aspect-video rounded-3xl"
                 )}
-            </AnimatePresence>
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => setShowControls(false)}
+                style={{ cursor: showControls ? 'default' : 'none' }}
+            >
+                <video
+                    ref={videoRef}
+                    className="h-full w-full"
+                    onClick={() => {
+                        handleFirstInteraction();
+                        togglePlay();
+                    }}
+                    onTimeUpdate={handleTimeUpdate}
+                    onLoadedMetadata={handleLoadedMetadata}
+                    onWaiting={() => setIsLoading(true)}
+                    onPlaying={() => setIsLoading(false)}
+                    muted={isMuted}
+                    playsInline
+                    style={{ filter: `brightness(${brightness}%)` }}
+                />
 
-            {/* Stream Error Overlay */}
-            <AnimatePresence>
-                {streamError && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="absolute inset-0 z-[70] flex flex-col items-center justify-center bg-zinc-950 px-6 text-center"
-                    >
-                        <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
-                            <X className="w-10 h-10 text-red-500" />
-                        </div>
-                        <h3 className="text-2xl font-black text-white mb-2">Stream Error</h3>
-                        <p className="text-zinc-400 mb-8 max-w-md">{streamError}</p>
-                        <button
-                            onClick={onClose}
-                            className="px-8 py-3 bg-white text-black font-black rounded-xl hover:scale-105 transition-all"
-                        >
-                            CLOSE PLAYER
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                {/* Gesture Overlay (Mobile Only) */}
+                <div
+                    className={cn(
+                        "absolute inset-0 z-40 touch-none md:hidden",
+                        !gesturesEnabled && "hidden"
+                    )}
+                    onPointerDown={(e) => {
+                        if (!e.isPrimary) return;
 
-            {/* Top/Bottom Gradients for readability */}
-            <AnimatePresence>
-                {showControls && (
-                    <>
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const edgePadding = 24;
+                        if (e.clientX < rect.left + edgePadding || e.clientX > rect.right - edgePadding) return;
+
+                        const target = e.target as HTMLElement;
+                        if (target.closest('button, input, a, [role="button"]')) return;
+
+                        // Capture pointer so we don't lose moves if finger slides off element
+                        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+
+                        gestureRef.current.startX = e.clientX;
+                        gestureRef.current.startY = e.clientY;
+                        gestureRef.current.startTime = Date.now();
+                        gestureRef.current.didGesture = false;
+
+                        // Double Tap Seek detection
+                        const now = Date.now();
+                        const delta = now - gestureRef.current.lastTap;
+                        if (delta < 300 && delta > 0) {
+                            // Use rect.left to get element-relative X, then compare to half width
+                            const relativeX = e.clientX - rect.left;
+                            const side = relativeX < rect.width / 2 ? 'left' : 'right';
+                            const seekAmount = side === 'left' ? -10 : 10;
+                            skip(seekAmount);
+                            setRipple({ x: e.clientX, y: e.clientY, side });
+                            setTimeout(() => setRipple(null), 600);
+                            gestureRef.current.lastTap = 0; // reset so triple-tap doesn't re-trigger
+                            gestureRef.current.didGesture = true;
+                            return;
+                        }
+                        gestureRef.current.lastTap = now;
+                    }}
+                    onPointerMove={(e) => {
+                        if (!e.isPrimary || gestureRef.current.isThrottled) return;
+
+                        const deltaX = e.clientX - gestureRef.current.startX;
+                        const deltaY = e.clientY - gestureRef.current.startY;
+                        const rect = e.currentTarget.getBoundingClientRect();
+
+                        if (!activeGesture) {
+                            if (Math.abs(deltaY) > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
+                                gestureRef.current.didGesture = true;
+                                const relativeX = e.clientX - rect.left;
+                                if (relativeX < rect.width / 2) {
+                                    setActiveGesture('brightness');
+                                    gestureRef.current.startValue = brightness;
+                                } else {
+                                    setActiveGesture('volume');
+                                    gestureRef.current.startValue = volume * 100;
+                                }
+                            } else if (Math.abs(deltaX) > 12) {
+                                gestureRef.current.didGesture = true;
+                                setActiveGesture('seek');
+                                gestureRef.current.startValue = currentTime;
+                                setShowControls(true);
+                            }
+                            return;
+                        }
+
+                        gestureRef.current.isThrottled = true;
+                        requestAnimationFrame(() => {
+                            if (activeGesture === 'brightness') {
+                                const change = (deltaY / rect.height) * -150;
+                                const newVal = Math.max(20, Math.min(100, gestureRef.current.startValue + change));
+                                setBrightness(newVal);
+                                setGestureValue(Math.round(newVal));
+                            } else if (activeGesture === 'volume') {
+                                const change = (deltaY / rect.height) * -100;
+                                const newVal = Math.max(0, Math.min(100, gestureRef.current.startValue + change));
+                                const volValue = newVal / 100;
+                                setVolume(volValue);
+                                setGestureValue(Math.round(newVal));
+                                if (videoRef.current) {
+                                    videoRef.current.volume = volValue;
+                                    videoRef.current.muted = volValue === 0;
+                                    setIsMuted(volValue === 0);
+                                }
+                            } else if (activeGesture === 'seek') {
+                                const change = (deltaX / rect.width) * (duration || 300);
+                                const newVal = Math.max(0, Math.min(duration || 1, gestureRef.current.startValue + change));
+                                setSeekPreview(newVal);
+                            }
+                            gestureRef.current.isThrottled = false;
+                        });
+                    }}
+                    onPointerUp={(e) => {
+                        if (activeGesture === 'seek' && seekPreview !== null) {
+                            if (videoRef.current) videoRef.current.currentTime = seekPreview;
+                            setCurrentTime(seekPreview);
+                        }
+
+                        // Simple tap (no gesture, tiny movement): toggle play + show controls
+                        if (!gestureRef.current.didGesture) {
+                            const dx = Math.abs(e.clientX - gestureRef.current.startX);
+                            const dy = Math.abs(e.clientY - gestureRef.current.startY);
+                            const elapsed = Date.now() - gestureRef.current.startTime;
+                            if (dx < 8 && dy < 8 && elapsed < 300) {
+                                togglePlay();
+                            }
+                        }
+
+                        setActiveGesture(null);
+                        setGestureValue(0);
+                        setSeekPreview(null);
+                        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+                        // Auto-hide controls after 3s
+                        controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
+                        setShowControls(true);
+                    }}
+                    onPointerCancel={() => {
+                        setActiveGesture(null);
+                        setGestureValue(0);
+                        setSeekPreview(null);
+                        gestureRef.current.didGesture = false;
+                    }}
+                />
+
+                {/* Gesture UI Overlays */}
+                <AnimatePresence>
+                    {activeGesture && activeGesture !== 'seek' && (
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 to-transparent pointer-events-none z-10"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10"
-                        />
-                    </>
-                )}
-            </AnimatePresence>
-
-            {/* Click to Unmute Overlay */}
-            <AnimatePresence>
-                {needsUserInteraction && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer"
-                        onClick={handleFirstInteraction}
-                    >
-                        <button
-                            className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full text-xl font-bold shadow-2xl hover:scale-105 transition-all flex items-center gap-3 animate-pulse"
+                            initial={{ opacity: 0, scale: 0.8, y: -20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-4 bg-black/40 backdrop-blur-xl border border-white/10 p-6 rounded-[2rem] pointer-events-none min-w-[120px]"
                         >
-                            <VolumeX className="w-8 h-8" />
-                            CLICK TO UNMUTE
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Center Controls (Play/Pause, Seek, Buffer) */}
-            <AnimatePresence mode="wait">
-                {showControls || !isPlaying ? (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
-                    >
-                        <div className="flex items-center gap-12 lg:gap-24 pointer-events-auto">
-                            {!isLive && (
-                                <button
-                                    onClick={() => skip(-10)}
-                                    className="p-4 rounded-full bg-black/20 hover:bg-black/40 text-white transition-all backdrop-blur-sm group/btn"
-                                >
-                                    <SkipBack className="w-10 h-10 group-active/btn:scale-90" />
-                                    <span className="absolute mt-2 left-1/2 -translate-x-1/2 text-xs font-bold whitespace-nowrap opacity-0 group-hover/btn:opacity-100">10s</span>
-                                </button>
+                            {activeGesture === 'brightness' ? (
+                                <Sun className="w-10 h-10 text-yellow-400 fill-yellow-400/20" />
+                            ) : (
+                                <VolIcon className="w-10 h-10 text-white" />
                             )}
-
-                            <button
-                                onClick={togglePlay}
-                                className="w-24 h-24 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all backdrop-blur-md"
-                            >
-                                {isLoading ? (
-                                    <Loader2 className="w-12 h-12 animate-spin text-red-600" />
-                                ) : isPlaying ? (
-                                    <Pause className="w-12 h-12 fill-current" />
-                                ) : (
-                                    <Play className="w-12 h-12 fill-current translate-x-1" />
-                                )}
-                            </button>
-
-                            {!isLive && (
-                                <button
-                                    onClick={() => skip(10)}
-                                    className="p-4 rounded-full bg-black/20 hover:bg-black/40 text-white transition-all backdrop-blur-sm group/btn"
-                                >
-                                    <SkipForward className="w-10 h-10 group-active/btn:scale-90" />
-                                    <span className="absolute mt-2 left-1/2 -translate-x-1/2 text-xs font-bold whitespace-nowrap opacity-0 group-hover/btn:opacity-100">10s</span>
-                                </button>
-                            )}
-                        </div>
-                    </motion.div>
-                ) : null}
-            </AnimatePresence>
-
-            {/* Overlays (Top and Bottom) */}
-            <AnimatePresence>
-                {showControls && (
-                    <div className="absolute inset-0 z-30 flex flex-col justify-between p-6 lg:p-10 pointer-events-none">
-                        {/* Top Bar */}
-                        <motion.div
-                            initial={{ y: -20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: -20, opacity: 0 }}
-                            className="flex items-center justify-between pointer-events-auto"
-                        >
-                            <div className="flex items-center gap-6">
-                                <button
-                                    onClick={onClose}
-                                    className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all"
-                                >
-                                    <X className="w-6 h-6" />
-                                </button>
-                                <div className="space-y-0.5">
-                                    <h2 className="text-2xl font-black text-white">
-                                        {title}
-                                        {type === "series" && season && episode && (
-                                            <span className="text-zinc-400 font-medium ml-3 text-lg">
-                                                S{season}:E{episode} {episodeTitle && `· ${episodeTitle}`}
-                                            </span>
-                                        )}
-                                    </h2>
-                                    <p className="text-zinc-400 text-sm font-medium tracking-wide uppercase">{type}</p>
+                            <div className="flex flex-col items-center gap-1">
+                                <span className="text-2xl font-black text-white tabular-nums">{gestureValue}%</span>
+                                <div className="w-20 h-1 bg-white/10 rounded-full overflow-hidden mt-2">
+                                    <div
+                                        className="h-full bg-white transition-all duration-100"
+                                        style={{ width: `${gestureValue}%` }}
+                                    />
                                 </div>
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                                <button
-                                    onClick={() => setShowSettings(!showSettings)}
-                                    className={cn(
-                                        "p-3 rounded-xl border transition-all pointer-events-auto",
-                                        showSettings
-                                            ? "bg-accent border-accent text-white"
-                                            : "bg-white/5 hover:bg-white/10 border-white/10 text-white"
-                                    )}
-                                >
-                                    <Settings className={cn("w-6 h-6", showSettings && "animate-spin-slow")} />
-                                </button>
-
-                                {/* Settings Panel Overlay */}
-                                <AnimatePresence>
-                                    {showSettings && (
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                            className="absolute top-20 right-0 w-72 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-4 z-50 pointer-events-auto"
-                                        >
-                                            <div className="space-y-6">
-                                                {!isLive && (
-                                                    <div className="space-y-3">
-                                                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Playback Speed</label>
-                                                        <div className="grid grid-cols-3 gap-2">
-                                                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
-                                                                <button
-                                                                    key={rate}
-                                                                    onClick={() => setPlaybackRate(rate)}
-                                                                    className={cn(
-                                                                        "py-2 rounded-lg text-xs font-bold transition-all",
-                                                                        playbackRate === rate
-                                                                            ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
-                                                                            : "bg-white/5 hover:bg-white/10 text-zinc-300"
-                                                                    )}
-                                                                >
-                                                                    {rate}x
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <div className="space-y-3">
-                                                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Quality</label>
-                                                    <div className="space-y-1">
-                                                        {['1080p (Auto)', '720p', '480p'].map((q) => (
-                                                            <button
-                                                                key={q}
-                                                                className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition-all group"
-                                                            >
-                                                                {q}
-                                                                {q.includes('Auto') && <div className="w-1.5 h-1.5 rounded-full bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)]" />}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-2 border-t border-white/5 space-y-2">
-                                                    <button
-                                                        onClick={runAudioDiagnostic}
-                                                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white/5 hover:bg-accent hover:text-white text-zinc-400 text-xs font-bold uppercase transition-all"
-                                                    >
-                                                        <Volume2 className="w-4 h-4" />
-                                                        Run Audio Diagnostic
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
                             </div>
                         </motion.div>
+                    )}
 
-                        {/* Bottom Control Bar */}
+                    {seekPreview !== null && (
                         <motion.div
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 20, opacity: 0 }}
-                            className="space-y-6 pointer-events-auto"
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="absolute bottom-32 left-1/2 -translate-x-1/2 z-50 bg-black/60 backdrop-blur-xl border border-white/10 px-6 py-4 rounded-2xl flex flex-col items-center gap-2 pointer-events-none"
                         >
-                            {/* Progress Slider */}
-                            {!isLive ? (
-                                <div className="space-y-2">
-                                    <div className="relative group/seeker px-1">
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max={duration || 100}
-                                            value={currentTime}
-                                            onChange={handleSeek}
-                                            className="w-full h-1.5 bg-white/20 accent-red-600 cursor-pointer rounded-full appearance-none group-hover/seeker:h-2 transition-all"
-                                            style={{
-                                                background: `linear-gradient(to right, theme('colors.red.600') ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.2) ${(currentTime / (duration || 1)) * 100}%)`
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-between text-zinc-300 text-sm font-medium tabular-nums px-1">
-                                        <span>{formatTime(currentTime)}</span>
-                                        <span>{formatTime(duration)}</span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden mb-4">
-                                    <div className="h-full bg-red-600/30 animate-pulse w-full" />
-                                </div>
-                            )}
+                            <div className="flex items-center gap-3">
+                                <FastForward className={cn("w-6 h-6 text-accent", seekPreview < currentTime && "rotate-180")} />
+                                <span className="text-3xl font-black text-white tabular-nums">{formatTime(seekPreview)}</span>
+                            </div>
+                            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                {seekPreview > currentTime ? `+${formatTime(seekPreview - currentTime)}` : `-${formatTime(currentTime - seekPreview)}`}
+                            </span>
+                        </motion.div>
+                    )}
 
-                            {/* Controls Row */}
-                            <div className="flex items-center justify-between">
+                    {ripple && (
+                        <motion.div
+                            initial={{ opacity: 0.5, scale: 0.5 }}
+                            animate={{ opacity: 0, scale: 2 }}
+                            className="absolute z-50 pointer-events-none flex flex-col items-center justify-center text-white/40"
+                            style={{ left: ripple.side === 'left' ? '25%' : '75%', top: '50%', transform: 'translate(-50%, -50%)' }}
+                        >
+                            {ripple.side === 'left' ? <Rewind className="w-20 h-20 fill-current" /> : <FastForward className="w-20 h-20 fill-current" />}
+                            <span className="text-xl font-black mt-2">{ripple.side === 'left' ? '-10s' : '+10s'}</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Reconnecting Overlay */}
+                <AnimatePresence>
+                    {isReconnecting && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm"
+                        >
+                            <Loader2 className="w-12 h-12 animate-spin text-red-600 mb-4" />
+                            <span className="text-white font-black tracking-widest uppercase">Reconnecting to Live Stream...</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Stream Error Overlay */}
+                <AnimatePresence>
+                    {streamError && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="absolute inset-0 z-[70] flex flex-col items-center justify-center bg-zinc-950 px-6 text-center"
+                        >
+                            <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+                                <X className="w-10 h-10 text-red-500" />
+                            </div>
+                            <h3 className="text-2xl font-black text-white mb-2">Stream Error</h3>
+                            <p className="text-zinc-400 mb-8 max-w-md">{streamError}</p>
+                            <button
+                                onClick={onClose}
+                                className="px-8 py-3 bg-white text-black font-black rounded-xl hover:scale-105 transition-all"
+                            >
+                                CLOSE PLAYER
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Top/Bottom Gradients for readability */}
+                <AnimatePresence>
+                    {showControls && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 to-transparent pointer-events-none z-10"
+                            />
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10"
+                            />
+                        </>
+                    )}
+                </AnimatePresence>
+
+                {/* Click to Unmute Overlay */}
+                <AnimatePresence>
+                    {needsUserInteraction && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer"
+                            onClick={handleFirstInteraction}
+                        >
+                            <button
+                                className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full text-xl font-bold shadow-2xl hover:scale-105 transition-all flex items-center gap-3 animate-pulse"
+                            >
+                                <VolumeX className="w-8 h-8" />
+                                CLICK TO UNMUTE
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Center Controls (Play/Pause, Seek, Buffer) */}
+                <AnimatePresence mode="wait">
+                    {showControls || !isPlaying ? (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+                        >
+                            <div className="flex items-center gap-12 lg:gap-24 pointer-events-auto">
+                                {!isLive && (
+                                    <button
+                                        onClick={() => skip(-10)}
+                                        className="p-4 rounded-full bg-black/20 hover:bg-black/40 text-white transition-all backdrop-blur-sm group/btn"
+                                    >
+                                        <SkipBack className="w-10 h-10 group-active/btn:scale-90" />
+                                        <span className="absolute mt-2 left-1/2 -translate-x-1/2 text-xs font-bold whitespace-nowrap opacity-0 group-hover/btn:opacity-100">10s</span>
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={togglePlay}
+                                    className="w-24 h-24 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all backdrop-blur-md"
+                                >
+                                    {isLoading ? (
+                                        <Loader2 className="w-12 h-12 animate-spin text-red-600" />
+                                    ) : isPlaying ? (
+                                        <Pause className="w-12 h-12 fill-current" />
+                                    ) : (
+                                        <Play className="w-12 h-12 fill-current translate-x-1" />
+                                    )}
+                                </button>
+
+                                {!isLive && (
+                                    <button
+                                        onClick={() => skip(10)}
+                                        className="p-4 rounded-full bg-black/20 hover:bg-black/40 text-white transition-all backdrop-blur-sm group/btn"
+                                    >
+                                        <SkipForward className="w-10 h-10 group-active/btn:scale-90" />
+                                        <span className="absolute mt-2 left-1/2 -translate-x-1/2 text-xs font-bold whitespace-nowrap opacity-0 group-hover/btn:opacity-100">10s</span>
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
+                    ) : null}
+                </AnimatePresence>
+
+                {/* Overlays (Top and Bottom) */}
+                <AnimatePresence>
+                    {showControls && (
+                        <div className="absolute inset-0 z-30 flex flex-col justify-between p-6 lg:p-10 pointer-events-none">
+                            {/* Top Bar */}
+                            <motion.div
+                                initial={{ y: -20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -20, opacity: 0 }}
+                                className="flex items-center justify-between pointer-events-auto"
+                            >
                                 <div className="flex items-center gap-6">
-                                    <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform">
-                                        {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current" />}
+                                    <button
+                                        onClick={onClose}
+                                        className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all"
+                                    >
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                    <div className="space-y-0.5">
+                                        <h2 className="text-2xl font-black text-white">
+                                            {title}
+                                            {type === "series" && season && episode && (
+                                                <span className="text-zinc-400 font-medium ml-3 text-lg">
+                                                    S{season}:E{episode} {episodeTitle && `· ${episodeTitle}`}
+                                                </span>
+                                            )}
+                                        </h2>
+                                        <p className="text-zinc-400 text-sm font-medium tracking-wide uppercase">{type}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={() => setShowSettings(!showSettings)}
+                                        className={cn(
+                                            "p-3 rounded-xl border transition-all pointer-events-auto",
+                                            showSettings
+                                                ? "bg-accent border-accent text-white"
+                                                : "bg-white/5 hover:bg-white/10 border-white/10 text-white"
+                                        )}
+                                    >
+                                        <Settings className={cn("w-6 h-6", showSettings && "animate-spin-slow")} />
                                     </button>
 
-                                    <div className="flex items-center gap-3 group/volume">
-                                        <button
-                                            onClick={() => {
-                                                const targetMute = !isMuted;
-                                                setIsMuted(targetMute);
-                                                if (videoRef.current) videoRef.current.muted = targetMute;
-                                            }}
-                                            className="text-white hover:scale-110 transition-transform"
-                                        >
-                                            {isMuted || volume === 0 ? <VolumeX className="w-7 h-7" /> : <Volume2 className="w-7 h-7" />}
-                                        </button>
-                                        <div className="w-0 group-hover/volume:w-24 transition-all duration-300 overflow-hidden flex items-center">
+                                    {/* Desktop Settings Panel Overlay (md+) */}
+                                    <AnimatePresence>
+                                        {showSettings && (
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                                className="hidden md:block absolute top-20 right-0 w-72 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-4 z-50 pointer-events-auto"
+                                            >
+                                                <SettingsPanelContent
+                                                    isLive={!!isLive}
+                                                    playbackRate={playbackRate}
+                                                    setPlaybackRate={setPlaybackRate}
+                                                    gesturesEnabled={gesturesEnabled}
+                                                    setGesturesEnabled={setGesturesEnabled}
+                                                    runAudioDiagnostic={runAudioDiagnostic}
+                                                />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </motion.div>
+
+                            {/* Bottom Control Bar */}
+                            <motion.div
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: 20, opacity: 0 }}
+                                className="space-y-6 pointer-events-auto"
+                            >
+                                {/* Progress Slider */}
+                                {!isLive ? (
+                                    <div className="space-y-2">
+                                        <div className="relative group/seeker px-1">
                                             <input
                                                 type="range"
                                                 min="0"
-                                                max="1"
-                                                step="0.05"
-                                                value={isMuted ? 0 : volume}
-                                                onChange={(e) => {
-                                                    const newVol = parseFloat(e.target.value);
-                                                    setVolume(newVol);
-                                                    setIsMuted(newVol === 0);
-                                                    if (videoRef.current) {
-                                                        videoRef.current.volume = newVol;
-                                                        videoRef.current.muted = newVol === 0;
-                                                    }
+                                                max={duration || 100}
+                                                value={currentTime}
+                                                onChange={handleSeek}
+                                                className="w-full h-1.5 bg-white/20 accent-red-600 cursor-pointer rounded-full appearance-none group-hover/seeker:h-2 transition-all"
+                                                style={{
+                                                    background: `linear-gradient(to right, theme('colors.red.600') ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.2) ${(currentTime / (duration || 1)) * 100}%)`
                                                 }}
-                                                className="w-24 h-1 bg-white/30 accent-white cursor-pointer"
                                             />
+                                        </div>
+                                        <div className="flex items-center justify-between text-zinc-300 text-sm font-medium tabular-nums px-1">
+                                            <span>{formatTime(currentTime)}</span>
+                                            <span>{formatTime(duration)}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden mb-4">
+                                        <div className="h-full bg-red-600/30 animate-pulse w-full" />
+                                    </div>
+                                )}
+
+                                {/* Controls Row */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-6">
+                                        <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform">
+                                            {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current" />}
+                                        </button>
+
+                                        <div className="flex items-center gap-3 group/volume">
+                                            <button
+                                                onClick={() => {
+                                                    const targetMute = !isMuted;
+                                                    setIsMuted(targetMute);
+                                                    if (videoRef.current) videoRef.current.muted = targetMute;
+                                                }}
+                                                className="text-white hover:scale-110 transition-transform"
+                                            >
+                                                {isMuted || volume === 0 ? <VolumeX className="w-7 h-7" /> : <Volume2 className="w-7 h-7" />}
+                                            </button>
+                                            <div className="w-0 group-hover/volume:w-24 transition-all duration-300 overflow-hidden flex items-center">
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="1"
+                                                    step="0.05"
+                                                    value={isMuted ? 0 : volume}
+                                                    onChange={(e) => {
+                                                        const newVol = parseFloat(e.target.value);
+                                                        setVolume(newVol);
+                                                        setIsMuted(newVol === 0);
+                                                        if (videoRef.current) {
+                                                            videoRef.current.volume = newVol;
+                                                            videoRef.current.muted = newVol === 0;
+                                                        }
+                                                    }}
+                                                    className="w-24 h-1 bg-white/30 accent-white cursor-pointer"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="h-6 w-px bg-white/10 mx-2" />
+
+                                        {/* Temporary Audio Diagnostic Button */}
+                                        <button
+                                            onClick={runAudioDiagnostic}
+                                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-lg transition-all animate-pulse pointer-events-auto border border-emerald-400/50"
+                                        >
+                                            🔊 DEBUG AUDIO
+                                        </button>
+
+                                        <div className="flex items-center gap-2">
+                                            {isLive ? (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/20 border border-red-500/30 text-white text-[10px] font-black uppercase backdrop-blur-md">
+                                                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                                                    LIVE
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-[10px] font-bold uppercase backdrop-blur-md">
+                                                    VOD
+                                                </div>
+                                            )}
+
+                                            {isLive && channelLogo && (
+                                                <div className="h-6 w-6 rounded bg-black/40 border border-white/10 p-1">
+                                                    <img src={channelLogo} alt="Logo" className="h-full w-full object-contain" />
+                                                </div>
+                                            )}
+
+                                            {isLive && (
+                                                <button
+                                                    onClick={() => hlsRef.current?.liveSyncPosition && (videoRef.current!.currentTime = hlsRef.current.liveSyncPosition)}
+                                                    className="text-[10px] font-bold text-zinc-400 hover:text-white transition-colors"
+                                                >
+                                                    ↻ BACK TO LIVE
+                                                </button>
+                                            )}
+                                            <span className="text-zinc-400 text-xs bg-white/5 py-1 px-2 rounded border border-white/10 uppercase tracking-tighter">
+                                                {isLive ? 'Live Edge' : '1080p · Auto'}
+                                            </span>
                                         </div>
                                     </div>
 
-                                    <div className="h-6 w-px bg-white/10 mx-2" />
-
-                                    {/* Temporary Audio Diagnostic Button */}
-                                    <button
-                                        onClick={runAudioDiagnostic}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-lg transition-all animate-pulse pointer-events-auto border border-emerald-400/50"
-                                    >
-                                        🔊 DEBUG AUDIO
-                                    </button>
-
-                                    <div className="flex items-center gap-2">
-                                        {isLive ? (
-                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/20 border border-red-500/30 text-white text-[10px] font-black uppercase backdrop-blur-md">
-                                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-                                                LIVE
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-[10px] font-bold uppercase backdrop-blur-md">
-                                                VOD
-                                            </div>
-                                        )}
-
-                                        {isLive && channelLogo && (
-                                            <div className="h-6 w-6 rounded bg-black/40 border border-white/10 p-1">
-                                                <img src={channelLogo} alt="Logo" className="h-full w-full object-contain" />
-                                            </div>
-                                        )}
-
-                                        {isLive && (
-                                            <button
-                                                onClick={() => hlsRef.current?.liveSyncPosition && (videoRef.current!.currentTime = hlsRef.current.liveSyncPosition)}
-                                                className="text-[10px] font-bold text-zinc-400 hover:text-white transition-colors"
-                                            >
-                                                ↻ BACK TO LIVE
-                                            </button>
-                                        )}
-                                        <span className="text-zinc-400 text-xs bg-white/5 py-1 px-2 rounded border border-white/10 uppercase tracking-tighter">
-                                            {isLive ? 'Live Edge' : '1080p · Auto'}
-                                        </span>
+                                    <div className="flex items-center gap-6 text-white/70">
+                                        <button className="hover:text-white transition-colors">
+                                            <Check className="w-6 h-6" />
+                                        </button>
+                                        <button
+                                            onClick={togglePip}
+                                            className="hover:text-white transition-colors"
+                                            title="Picture in Picture"
+                                        >
+                                            <Monitor className="w-6 h-6" />
+                                        </button>
+                                        <button onClick={toggleFullscreen} className="hover:text-white hover:scale-110 transition-all">
+                                            {isFullscreen ? <Minimize className="w-7 h-7" /> : <Maximize className="w-7 h-7" />}
+                                        </button>
                                     </div>
                                 </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+            </div>
 
-                                <div className="flex items-center gap-6 text-white/70">
-                                    <button className="hover:text-white transition-colors">
-                                        <Check className="w-6 h-6" />
-                                    </button>
-                                    <button
-                                        onClick={togglePip}
-                                        className="hover:text-white transition-colors"
-                                        title="Picture in Picture"
-                                    >
-                                        <Monitor className="w-6 h-6" />
-                                    </button>
-                                    <button onClick={toggleFullscreen} className="hover:text-white hover:scale-110 transition-all">
-                                        {isFullscreen ? <Minimize className="w-7 h-7" /> : <Maximize className="w-7 h-7" />}
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-        </div>
+            {/* Mobile Settings Bottom Sheet (md:hidden) */}
+            <Drawer.Root open={showSettings} onOpenChange={(open) => !open && setShowSettings(false)} shouldScaleBackground={false}>
+                <Drawer.Portal>
+                    <Drawer.Overlay className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm md:hidden" />
+                    <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[160] flex max-h-[75vh] flex-col rounded-t-[28px] bg-zinc-900 border-t border-white/10 outline-none md:hidden">
+                        <div className="mx-auto mt-4 h-1.5 w-12 shrink-0 rounded-full bg-white/10" />
+                        <div className="p-5 pb-2 flex items-center justify-between">
+                            <h2 className="text-base font-bold text-white">Player Settings</h2>
+                            <button onClick={() => setShowSettings(false)} className="p-2 rounded-full bg-white/5 text-zinc-400">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto px-5 pb-2">
+                            <SettingsPanelContent
+                                isLive={!!isLive}
+                                playbackRate={playbackRate}
+                                setPlaybackRate={setPlaybackRate}
+                                gesturesEnabled={gesturesEnabled}
+                                setGesturesEnabled={setGesturesEnabled}
+                                runAudioDiagnostic={() => { runAudioDiagnostic(); setShowSettings(false); }}
+                            />
+                        </div>
+                        {/* Safe area + BottomNav spacer */}
+                        <div className="h-[calc(80px+env(safe-area-inset-bottom))] shrink-0" />
+                    </Drawer.Content>
+                </Drawer.Portal>
+            </Drawer.Root>
+        </>
     );
 }
 
@@ -818,4 +1014,94 @@ function formatTime(seconds: number): string {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+}
+
+// ─── Settings Panel (shared between Desktop dropdown & Mobile sheet) ──────────
+interface SettingsPanelContentProps {
+    isLive: boolean;
+    playbackRate: number;
+    setPlaybackRate: (r: number) => void;
+    gesturesEnabled: boolean;
+    setGesturesEnabled: (v: boolean) => void;
+    runAudioDiagnostic: () => void;
+}
+
+function SettingsPanelContent({
+    isLive, playbackRate, setPlaybackRate,
+    gesturesEnabled, setGesturesEnabled, runAudioDiagnostic
+}: SettingsPanelContentProps) {
+    return (
+        <div className="space-y-6 py-2">
+            {/* Speed */}
+            {!isLive && (
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Playback Speed</label>
+                    <div className="grid grid-cols-3 gap-2">
+                        {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                            <button
+                                key={rate}
+                                onClick={() => setPlaybackRate(rate)}
+                                className={cn(
+                                    "py-2.5 rounded-lg text-xs font-bold transition-all",
+                                    playbackRate === rate
+                                        ? "bg-red-600 text-white shadow-lg shadow-red-600/20"
+                                        : "bg-white/5 hover:bg-white/10 text-zinc-300"
+                                )}
+                            >
+                                {rate}x
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Quality */}
+            <div className="space-y-3">
+                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Quality</label>
+                <div className="space-y-1.5">
+                    {['1080p (Auto)', '720p', '480p'].map((q) => (
+                        <button
+                            key={q}
+                            className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition-all"
+                        >
+                            {q}
+                            {q.includes('Auto') && <div className="w-2 h-2 rounded-full bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)]" />}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Gestures Toggle (Mobile only makes sense, but shown in both) */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <div>
+                    <p className="text-sm font-semibold text-white">Touch Gestures</p>
+                    <p className="text-[11px] text-zinc-500">Swipe to control brightness, volume & seek</p>
+                </div>
+                <button
+                    onClick={() => setGesturesEnabled(!gesturesEnabled)}
+                    className={cn(
+                        "relative w-11 h-6 rounded-full transition-colors duration-200 flex items-center px-0.5",
+                        gesturesEnabled ? "bg-red-600" : "bg-white/15"
+                    )}
+                    aria-label="Toggle gestures"
+                >
+                    <div className={cn(
+                        "w-5 h-5 rounded-full bg-white shadow transition-transform duration-200",
+                        gesturesEnabled ? "translate-x-5" : "translate-x-0"
+                    )} />
+                </button>
+            </div>
+
+            {/* Audio Diagnostic */}
+            <div className="pt-2 border-t border-white/5">
+                <button
+                    onClick={runAudioDiagnostic}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white/5 hover:bg-accent hover:text-white text-zinc-400 text-xs font-bold uppercase tracking-wide transition-all"
+                >
+                    <Volume2 className="w-4 h-4" />
+                    Run Audio Diagnostic
+                </button>
+            </div>
+        </div>
+    );
 }

@@ -10,6 +10,7 @@ interface SettingsState {
     defaultQuality: string;
     cardSize: "small" | "medium" | "large";
     animationIntensity: "full" | "reduced" | "none";
+    gesturesEnabled: boolean;
 
     setAccentColor: (color: AccentColor) => void;
     setBackgroundBrightness: (value: number) => void;
@@ -17,6 +18,7 @@ interface SettingsState {
     setDefaultQuality: (value: string) => void;
     setCardSize: (size: "small" | "medium" | "large") => void;
     setAnimationIntensity: (intensity: "full" | "reduced" | "none") => void;
+    setGesturesEnabled: (value: boolean) => void;
     resetAll: () => void;
 }
 
@@ -27,6 +29,7 @@ const DEFAULT_SETTINGS = {
     defaultQuality: "Auto",
     cardSize: "medium" as const,
     animationIntensity: "full" as const,
+    gesturesEnabled: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -39,6 +42,7 @@ export const useSettingsStore = create<SettingsState>()(
             setDefaultQuality: (defaultQuality) => set({ defaultQuality }),
             setCardSize: (cardSize) => set({ cardSize }),
             setAnimationIntensity: (animationIntensity) => set({ animationIntensity }),
+            setGesturesEnabled: (gesturesEnabled) => set({ gesturesEnabled }),
             resetAll: () => set(DEFAULT_SETTINGS),
         }),
         {

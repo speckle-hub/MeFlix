@@ -4,14 +4,19 @@ import ContentGrid from "@/components/ui/ContentGrid";
 import FilterBar from "@/components/ui/FilterBar";
 import { useCatalog } from "@/hooks/useCatalog";
 import { Film } from "lucide-react";
+import PullToRefresh from "@/components/ui/PullToRefresh";
+
 
 import { Suspense } from "react";
 
 export default function MoviesPage() {
     return (
         <Suspense fallback={<div>Loading Movies...</div>}>
-            <MoviesContent />
+            <PullToRefresh onRefresh={async () => { await new Promise(r => setTimeout(r, 1000)); window.location.reload(); }}>
+                <MoviesContent />
+            </PullToRefresh>
         </Suspense>
+
     );
 }
 

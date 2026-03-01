@@ -3,14 +3,17 @@
 import { use, useState, useEffect } from "react";
 import Image from "next/image";
 import { useMetadata } from "@/hooks/useMetadata";
-import { Play, Plus, Star, Clock, Calendar, Globe, Info, Loader2 } from "lucide-react";
+import { Play, Plus, Star, Clock, Calendar, Globe, Info, Loader2, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import Link from "next/link";
 import { ContentGridSkeleton } from "@/components/ui/Skeleton";
 import ContentGrid from "@/components/ui/ContentGrid";
 import { SeasonSelector } from "@/components/media/SeasonSelector";
 import { StreamSelector } from "@/components/media/StreamSelector";
 import VideoPlayer from "@/components/ui/VideoPlayer";
 import { StremioStream } from "@/types/stremio";
+import { EpisodeAccordion } from "@/components/media/EpisodeAccordion";
 
 /** Context stored in sessionStorage by various pages to provide metadata and source tracking */
 interface ContentContext {
@@ -85,6 +88,14 @@ export default function MetaPage({ params }: MetaPageProps) {
         // Bypass season selector if we are in fallback mode (no episode data)
         const hasVideos = (meta?.videos?.length ?? 0) > 0;
         if (type === "series" && !nsfwFallback && hasVideos) {
+            // On mobile, we might want to scroll to the accordion instead of opening the modal
+            if (window.innerWidth < 768) {
+                const element = document.getElementById('episodes-section');
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                    return;
+                }
+            }
             setShowSeasonSelector(true);
         } else {
             console.log('[META] Skipping season selector for NSFW/Fallback content');
@@ -176,6 +187,14 @@ export default function MetaPage({ params }: MetaPageProps) {
 
     return (
         <div className="relative -mt-4 space-y-12 lg:-mt-8">
+            {/* Back Button (Mobile) */}
+            <Link
+                href="/"
+                className="fixed top-[calc(env(safe-area-inset-top)+1rem)] left-4 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all active:scale-90 md:hidden"
+            >
+                <ArrowLeft className="h-6 w-6" />
+            </Link>
+
             {/* Season Selector Modal */}
             {showSeasonSelector && activeMeta && (
                 <SeasonSelector
@@ -207,9 +226,9 @@ export default function MetaPage({ params }: MetaPageProps) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-3xl p-4 lg:p-12"
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-3xl p-0 lg:p-12"
                     >
-                        <div className="w-full max-w-6xl shadow-2xl shadow-accent/20">
+                        <div className="w-full h-full lg:h-auto lg:max-w-6xl shadow-2xl shadow-accent/20">
                             <VideoPlayer
                                 url={activeStream.url || ""}
                                 title={activeMeta.name || "Untitled"}
@@ -229,17 +248,18 @@ export default function MetaPage({ params }: MetaPageProps) {
                 )}
             </AnimatePresence>
             {/* Cinematic Hero Backdrop */}
-            <section className="relative -mx-4 h-[70vh] overflow-hidden lg:-mx-8 lg:h-[80vh]">
+            {/* Cinematic Hero Backdrop */}
+            <section className="relative -mx-4 h-[55vh] overflow-hidden lg:-mx-8 lg:h-[80vh]">
                 {/* Backdrop Image */}
                 <div className="absolute inset-0">
                     <Image
                         src={activeMeta.background || activeMeta.poster || "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop"}
                         alt={activeMeta.name || "Media Preview"}
                         fill
-                        className="object-cover opacity-40 blur-[1px]"
+                        className="object-cover opacity-60 blur-[1px] lg:opacity-40"
                         priority
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
                     <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent hidden lg:block" />
                 </div>
 
@@ -275,33 +295,79 @@ export default function MetaPage({ params }: MetaPageProps) {
                             )}
                         </div>
 
-                        <h1 className="text-4xl font-extrabold tracking-tight text-white md:text-6xl lg:text-7xl">
+                        <h1 className="text-4xl font-black tracking-tight text-white md:text-6xl lg:text-7xl">
                             {activeMeta.name}
                         </h1>
 
-                        <p className="line-clamp-3 text-lg leading-relaxed text-text-muted md:text-xl lg:line-clamp-none">
+                        <p className="hidden md:block line-clamp-3 text-base leading-relaxed text-text-muted md:text-xl lg:line-clamp-none lg:text-lg">
                             {activeMeta.description}
                         </p>
 
-                        <div className="flex flex-wrap gap-4 pt-4">
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleWatchNow}
-                                className="flex items-center gap-3 rounded-2xl bg-white px-8 py-4 text-sm font-bold text-black transition-all shadow-xl shadow-white/5 disabled:opacity-50"
-                            >
-                                <Play className="h-5 w-5 fill-current" />
-                                Watch Now
-                            </motion.button>
-                            <motion.button
-                                whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
-                                whileTap={{ scale: 0.95 }}
-                                className="flex items-center gap-3 rounded-2xl glass px-8 py-4 text-sm font-bold text-white transition-all border border-white/5"
-                            >
-                                <Plus className="h-5 w-5" />
-                                Add to Watchlist
-                            </motion.button>
+                        <div className="flex flex-col gap-3 py-4 md:flex-row md:gap-4 md:pt-4">
+                            <div className="flex gap-3 w-full md:w-auto">
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={handleWatchNow}
+                                    className="flex grow items-center justify-center gap-3 rounded-2xl bg-white px-8 py-4 text-base font-black text-black transition-all shadow-xl shadow-white/5 disabled:opacity-50 md:grow-0 md:py-4 md:text-sm min-h-[56px] min-w-[200px]"
+                                >
+                                    <Play className="h-5 w-5 fill-current" />
+                                    {type === "series" ? "Episodes" : "Watch Now"}
+                                </motion.button>
+
+                                <motion.button
+                                    whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className="flex h-[56px] w-[56px] items-center justify-center rounded-2xl glass transition-all border border-white/5 md:hidden"
+                                    onClick={() => {
+                                        if (navigator.share) {
+                                            navigator.share({
+                                                title: activeMeta.name,
+                                                text: `Check out ${activeMeta.name} on MeFlix!`,
+                                                url: window.location.href,
+                                            }).catch(() => { });
+                                        } else {
+                                            navigator.clipboard.writeText(window.location.href);
+                                            toast.success("Link copied to clipboard");
+                                        }
+                                    }}
+                                >
+                                    <Globe className="h-6 w-6" />
+                                </motion.button>
+                            </div>
+
+                            <div className="flex gap-3 w-full md:w-auto">
+                                <motion.button
+                                    whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className="flex grow items-center justify-center gap-3 rounded-2xl glass px-8 py-4 text-base font-black text-white transition-all border border-white/5 md:grow-0 md:py-4 md:text-sm min-h-[56px]"
+                                    onClick={() => {
+                                        toast.success("Added to Watchlist");
+                                    }}
+                                >
+                                    <Plus className="h-5 w-5" />
+                                    <span className="md:inline">Watchlist</span>
+                                </motion.button>
+
+                                <motion.button
+                                    whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className="hidden md:flex items-center justify-center gap-3 rounded-2xl glass px-8 py-4 text-sm font-black text-white transition-all border border-white/5 hover:bg-white/10"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(window.location.href);
+                                        toast.success("Link copied to clipboard");
+                                    }}
+                                >
+                                    <Globe className="h-5 w-5" />
+                                    Share
+                                </motion.button>
+                            </div>
                         </div>
+
+                        {/* Mobile Description (After Actions) */}
+                        <p className="block md:hidden text-sm leading-relaxed text-text-muted/90 line-clamp-4">
+                            {activeMeta.description}
+                        </p>
                     </motion.div>
                 </div>
             </section>
@@ -312,19 +378,29 @@ export default function MetaPage({ params }: MetaPageProps) {
                     {/* Cast */}
                     {activeMeta.cast && activeMeta.cast.length > 0 && (
                         <section className="space-y-4">
-                            <h2 className="text-xl font-bold text-white">Top Cast</h2>
-                            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                            <h2 className="text-xl font-black text-white px-1 lg:px-0">Top Cast</h2>
+                            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 lg:-mx-0 lg:px-0">
                                 {activeMeta.cast.map((person) => (
-                                    <div key={person} className="flex flex-col items-center gap-2 min-w-[100px]">
-                                        <div className="h-16 w-16 rounded-full bg-surface-hover flex items-center justify-center text-accent">
+                                    <div key={person} className="flex flex-col items-center gap-2 min-w-[80px]">
+                                        <div className="h-16 w-16 rounded-full bg-surface-hover flex items-center justify-center text-accent ring-1 ring-white/5">
                                             <Globe className="h-8 w-8" />
                                         </div>
-                                        <span className="text-center text-xs font-medium text-text-muted">{person}</span>
+                                        <span className="text-center text-[10px] font-bold text-text-muted truncate w-20">{person}</span>
                                     </div>
                                 ))}
                             </div>
                         </section>
                     )}
+
+                    {/* Mobile Season/Episode Accordion */}
+                    <div id="episodes-section" className="block lg:hidden">
+                        {type === "series" && activeMeta && !isFallback && (
+                            <EpisodeAccordion
+                                meta={activeMeta}
+                                onEpisodeSelect={handleEpisodeSelect}
+                            />
+                        )}
+                    </div>
 
                     {/* More Details info boxes */}
                     <section className="grid gap-6 sm:grid-cols-2">

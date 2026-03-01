@@ -45,7 +45,7 @@ export default function ContentGrid({ title, movies, loading }: ContentGridProps
                 </h2>
                 <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent ml-8 hidden md:block" />
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 lg:gap-x-6">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-6 lg:gap-x-6">
                 {movies.map((movie, index) => (
                     <MediaCard key={movie.id} movie={movie} index={index} />
                 ))}

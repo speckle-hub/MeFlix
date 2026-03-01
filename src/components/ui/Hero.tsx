@@ -37,7 +37,7 @@ export default function Hero({ movies, loading }: HeroProps) {
     if (!movie) return null;
 
     return (
-        <section className="relative -mx-4 -mt-4 h-[90vh] w-[calc(100%+2rem)] overflow-hidden lg:-mx-8 lg:-mt-8 lg:h-[80vh] lg:w-[calc(100%+4rem)]">
+        <section className="relative -mx-4 -mt-4 h-[70vh] w-[calc(100%+2rem)] overflow-hidden lg:-mx-8 lg:-mt-8 lg:h-[80vh] lg:w-[calc(100%+4rem)]">
             <AnimatePresence mode="wait">
                 <motion.div
                     key={movie.id}
@@ -75,7 +75,7 @@ export default function Hero({ movies, loading }: HeroProps) {
 
                     {/* Content Layer */}
                     <div className="relative z-10 flex h-full items-end p-8 pb-16 lg:p-16 lg:pb-24">
-                        <div className="flex w-full items-end justify-between">
+                        <div className="flex w-full flex-col items-start justify-between gap-8 lg:flex-row lg:items-end">
                             {/* Text Content */}
                             <motion.div
                                 initial={{ y: 20, opacity: 0 }}
@@ -100,7 +100,7 @@ export default function Hero({ movies, loading }: HeroProps) {
                                 </div>
 
                                 <motion.h1
-                                    className="mb-4 text-6xl font-black tracking-tighter text-white md:text-8xl lg:text-9xl uppercase line-clamp-2"
+                                    className="mb-2 text-3xl font-black tracking-tighter text-white md:text-8xl lg:text-9xl uppercase line-clamp-2"
                                     style={{
                                         textShadow: "0 10px 30px rgba(0,0,0,0.8)",
                                         lineHeight: 0.9
@@ -110,7 +110,7 @@ export default function Hero({ movies, loading }: HeroProps) {
                                 </motion.h1>
 
                                 <motion.p
-                                    className="mb-10 line-clamp-2 text-lg font-bold text-white/90 md:text-2xl lg:max-w-2xl drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
+                                    className="mb-6 line-clamp-2 text-xs font-bold text-white/90 md:text-2xl lg:max-w-2xl drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
                                 >
                                     {movie.description}
                                 </motion.p>
