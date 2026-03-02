@@ -10,8 +10,7 @@ export async function GET(request: NextRequest) {
         return new NextResponse('Missing URL parameter', { status: 400 });
     }
 
-    console.log(`[STREAM-PROXY] Proxying: ${url}`);
-
+    console.log(`[STREAM-PROXY] Request received for: ${url}`);
     const range = request.headers.get('range');
 
     try {
@@ -20,17 +19,28 @@ export async function GET(request: NextRequest) {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Referer': urlObj.origin + '/',
             'Origin': urlObj.origin,
+            'Accept': '*/*',
         };
 
         if (range) {
             headers['Range'] = range;
-            console.log(`[STREAM-PROXY] Range: ${range}`);
+            console.log(`[STREAM-PROXY] Range requested: ${range}`);
         }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
         const response = await fetch(url, {
             headers,
             cache: 'no-store',
+            redirect: 'follow', // Explicitly follow redirects
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
+
+        console.log(`[STREAM-PROXY] Upstream Response: ${response.status} ${response.statusText}`);
+        console.log(`[STREAM-PROXY] Upstream Content-Type: ${response.headers.get('content-type')}`);
 
         // Create headers for the proxied response
         const responseHeaders = new Headers();
@@ -64,7 +74,11 @@ export async function GET(request: NextRequest) {
             statusText: response.statusText,
             headers: responseHeaders,
         });
-    } catch (err) {
+    } catch (err: any) {
+        if (err.name === 'AbortError') {
+            console.error(`[STREAM-PROXY] Timeout for ${url}`);
+            return new NextResponse('Proxy Timeout: Source server took too long to respond', { status: 504 });
+        }
         console.error(`[STREAM-PROXY] Fatal error for ${url}:`, err);
         return new NextResponse(`Proxy Error: ${err instanceof Error ? err.message : String(err)}`, { status: 500 });
     }

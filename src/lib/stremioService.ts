@@ -424,11 +424,12 @@ export async function fetchSearch(
     addonUrl: string,
     type: string,
     query: string,
-    includeNSFW: boolean = false
+    includeNSFW: boolean = false,
+    skip: number = 0
 ): Promise<StremioCatalogResponse> {
     if (DEMO_MODE) {
         // ... (keep demo mode as is or minor updates)
-        console.log(`[SEARCH] Query: "${query}" | Include NSFW: ${includeNSFW}`);
+        console.log(`[SEARCH] Query: "${query}" | Skip: ${skip} | Include NSFW: ${includeNSFW}`);
         const searchTerm = query.toLowerCase();
 
         // Search across EVERYTHING in demo mode

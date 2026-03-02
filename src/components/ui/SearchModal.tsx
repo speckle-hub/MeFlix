@@ -27,9 +27,13 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         anime: []
     });
     const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [skips, setSkips] = useState({ movie: 0, series: 0, anime: 0 });
+    const [hasMore, setHasMore] = useState({ movie: true, series: true, anime: true });
     const [history, setHistory] = useState<string[]>([]);
     const { addons } = useAddonStore();
     const inputRef = useRef<HTMLInputElement>(null);
+    const observerTarget = useRef<HTMLDivElement>(null);
     const pathname = usePathname();
     const isNSFWPage = pathname?.startsWith("/nsfw");
 
@@ -59,41 +63,56 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         } else {
             setQuery("");
             setResults({ movies: [], series: [], anime: [] });
+            setSkips({ movie: 0, series: 0, anime: 0 });
+            setHasMore({ movie: true, series: true, anime: true });
         }
     }, [isOpen]);
 
-    const performSearch = useCallback(async (q: string) => {
+    const performSearch = useCallback(async (q: string, isLoadMore = false) => {
         if (!q.trim()) {
             setResults({ movies: [], series: [], anime: [] });
+            setHasMore({ movie: true, series: true, anime: true });
             return;
         }
 
-        setLoading(true);
-        setResults({ movies: [], series: [], anime: [] }); // Clear old results immediately
+        if (isLoadMore) setLoadingMore(true);
+        else {
+            setLoading(true);
+            setResults({ movies: [], series: [], anime: [] });
+            setSkips({ movie: 0, series: 0, anime: 0 });
+            setHasMore({ movie: true, series: true, anime: true });
+        }
+
         try {
             // Filter addons by BOTH enabled status AND NSFW safety matching current page
             const filteredAddons = addons.filter(a => a.isEnabled && a.isNSFW === isNSFWPage);
             const types = ["movie", "series", "anime"];
+            const currentSkips = isLoadMore ? skips : { movie: 0, series: 0, anime: 0 };
 
             console.log(`[SEARCH] Query: "${q}" | isNSFWPage: ${isNSFWPage} | Addons matching context: ${filteredAddons.length}`);
             if (filteredAddons.length === 0) {
                 console.warn("[SEARCH] No addons found matching the current safety context.");
             }
 
-            const movieResults: Movie[] = [];
-            const seriesResults: Movie[] = [];
-            const animeResults: Movie[] = [];
-            const seenIds = new Set<string>();
-
             const promises = filteredAddons.flatMap(addon =>
-                types.map(type => fetchSearch(addon.url, type, q, isNSFWPage).catch((err) => {
-                    console.error(`[SEARCH] Addon ${addon.name} failed for ${type}:`, err);
-                    return { metas: [] };
-                }))
+                types.map(type => {
+                    const skipVal = (currentSkips as any)[type];
+                    // Skip if we already know there's no more for this type/addon combo?
+                    // For simplicity, we fetch for all enabled addons
+                    return fetchSearch(addon.url, type, q, isNSFWPage, skipVal).catch((err) => {
+                        console.error(`[SEARCH] Addon ${addon.name} failed for ${type}:`, err);
+                        return { metas: [] };
+                    });
+                })
             );
 
             const responses = await Promise.all(promises);
             console.log(`[SEARCH] Received ${responses.length} total responses from addon engines`);
+
+            const newMovies: Movie[] = [];
+            const newSeries: Movie[] = [];
+            const newAnime: Movie[] = [];
+            const seenIds = new Set(isLoadMore ? [...results.movies, ...results.series, ...results.anime].map(m => m.id) : []);
 
             responses.forEach((res, index) => {
                 const catalogRes = res as StremioCatalogResponse;
@@ -117,23 +136,44 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                             isNSFW: meta.id.includes('nsfw') || (meta as any).isNSFW || false
                         };
 
-                        if (item.type === "movie") movieResults.push(item);
-                        else if (item.type === "series") seriesResults.push(item);
-                        else if (item.type === "anime") animeResults.push(item);
+                        if (item.type === "movie") newMovies.push(item);
+                        else if (item.type === "series") newSeries.push(item);
+                        else if (item.type === "anime") newAnime.push(item);
                     }
                 });
             });
 
-            console.log(`[SEARCH] Total results aggregated: movies=${movieResults.length}, series=${seriesResults.length}, anime=${animeResults.length}`);
+            console.log(`[SEARCH] Total results aggregated: movies=${newMovies.length}, series=${newSeries.length}, anime=${newAnime.length}`);
 
-            setResults({
-                movies: movieResults.slice(0, 5),
-                series: seriesResults.slice(0, 5),
-                anime: animeResults.slice(0, 5)
+            setResults(prev => ({
+                movies: isLoadMore ? [...prev.movies, ...newMovies] : newMovies,
+                series: isLoadMore ? [...prev.series, ...newSeries] : newSeries,
+                anime: isLoadMore ? [...prev.anime, ...newAnime] : newAnime,
+            }));
+
+            // Update skips and check for more
+            if (isLoadMore) {
+                setSkips(prev => ({
+                    movie: prev.movie + (newMovies.length > 0 ? 20 : 0),
+                    series: prev.series + (newSeries.length > 0 ? 20 : 0),
+                    anime: prev.anime + (newAnime.length > 0 ? 20 : 0),
+                }));
+            } else {
+                setSkips({
+                    movie: newMovies.length > 0 ? 20 : 0,
+                    series: newSeries.length > 0 ? 20 : 0,
+                    anime: newAnime.length > 0 ? 20 : 0,
+                });
+            }
+
+            setHasMore({
+                movie: newMovies.length > 0,
+                series: newSeries.length > 0,
+                anime: newAnime.length > 0
             });
 
-            // Save to history (only if we have results)
-            if (movieResults.length + seriesResults.length + animeResults.length > 0) {
+            // Save to history (only on initial search)
+            if (!isLoadMore && (newMovies.length + newSeries.length + newAnime.length > 0)) {
                 setHistory(prev => {
                     const newHistory = [q, ...prev.filter(h => h !== q)].slice(0, 5);
                     localStorage.setItem("meflix-search-history", JSON.stringify(newHistory));
@@ -144,8 +184,24 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             console.error("[SEARCH] Search failed:", err);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
-    }, [addons, isNSFWPage]);
+    }, [addons, isNSFWPage, skips, results]);
+
+    // Infinite Scroll Observer
+    useEffect(() => {
+        if (!isOpen || loading || loadingMore || (!hasMore.movie && !hasMore.series && !hasMore.anime)) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && query.trim()) {
+                console.log("[SEARCH] Intersection detected, loading more...");
+                performSearch(query, true);
+            }
+        }, { threshold: 0.1 });
+
+        if (observerTarget.current) observer.observe(observerTarget.current);
+        return () => observer.disconnect();
+    }, [isOpen, loading, loadingMore, hasMore, query, performSearch]);
 
     useEffect(() => {
         performSearch(debouncedQuery);
@@ -276,6 +332,20 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                                 <ResultSection title="TV Series" icon={Tv} results={results.series} onClose={onClose} />
                                 <ResultSection title="Anime" icon={PlaySquare} results={results.anime} onClose={onClose} />
                             </div>
+
+                            {/* Infinite Scroll Load Indicator / Target */}
+                            {(hasMore.movie || hasMore.series || hasMore.anime) && query && (
+                                <div ref={observerTarget} className="h-20 flex items-center justify-center mt-4">
+                                    {loadingMore ? (
+                                        <div className="flex items-center gap-2 text-text-muted">
+                                            <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                                            <span className="text-xs font-medium uppercase tracking-widest">Loading more...</span>
+                                        </div>
+                                    ) : (
+                                        <div className="h-1 w-full" /> // Target for observer
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Footer - Only on Desktop */}

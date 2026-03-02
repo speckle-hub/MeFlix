@@ -40,32 +40,32 @@ export const DEFAULT_ADDONS = [
         name: "OSVH Addon"
     },
     {
-        url: "https://stremio-jackett.onrender.com/manifest.json",
-        name: "Jackett"
+        url: "https://webstreamr.hayd.uk/manifest.json",
+        name: "WebStreamr"
     },
     {
-        url: "https://1337x-stremio.vercel.app/manifest.json",
-        name: "1337x"
+        url: "https://autostreamtest.onrender.com/manifest.json",
+        name: "AutoStream"
     },
     {
-        url: "https://stremio-yts.onrender.com/manifest.json",
-        name: "YTS"
+        url: "https://stremify.elfhosted.com/manifest.json",
+        name: "Stremify"
     },
     {
-        url: "https://stremio-solidtorrents.onrender.com/manifest.json",
-        name: "SolidTorrents"
+        url: "https://tstrm.org/manifest.json",
+        name: "TStream"
     },
     {
-        url: "https://stremio-nyaa.onrender.com/manifest.json",
-        name: "Nyaa"
+        url: "https://nodebrid.fly.dev/manifest.json",
+        name: "NodeBrid"
     },
     {
-        url: "https://stremio-piratebay.onrender.com/manifest.json",
-        name: "The Pirate Bay"
+        url: "https://animestream-addon.keypop3750.workers.dev/manifest.json",
+        name: "AnimeStream"
     },
     {
-        url: "https://stremio-rarbg.onrender.com/manifest.json",
-        name: "RARBG"
+        url: "https://yastream.tamthai.de/manifest.json",
+        name: "YaStream"
     }
 ];
 
