@@ -124,10 +124,10 @@ async function safeJson<T>(response: Response): Promise<T | null> {
 /**
  * Fetch with automatic CORS proxy cycling on failure
  */
-async function fetchWithProxy(url: string, allowWait: boolean = true): Promise<Response> {
-    if (allowWait) {
-        // Enforce 1s delay as requested to avoid 429 errors
-        await delay(1000);
+async function fetchWithProxy(url: string, delayMs: number = 1000): Promise<Response> {
+    if (delayMs > 0) {
+        // Enforce delay as requested to avoid 429 errors
+        await delay(delayMs);
     }
 
     const errors: string[] = [];
@@ -168,8 +168,8 @@ async function fetchWithProxy(url: string, allowWait: boolean = true): Promise<R
                 method: 'GET',
                 headers,
                 cache: 'no-store',
-                // Keep timeout reasonable
-                signal: AbortSignal.timeout(8000)
+                // Use a dynamic timeout: catalogs are shorter, streams can be longer
+                signal: AbortSignal.timeout(url.includes('/catalog/') ? 7000 : 12000)
             });
 
             if (response.status === 404) {
@@ -209,12 +209,19 @@ async function fetchWithProxy(url: string, allowWait: boolean = true): Promise<R
 }
 
 const manifestCache: Record<string, StremioManifest> = {};
+const catalogCache: Record<string, { data: StremioCatalogResponse, timestamp: number }> = {};
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes in ms
+
+export function clearCatalogCache() {
+    Object.keys(catalogCache).forEach(key => delete catalogCache[key]);
+    console.log("[MeFlix] Catalog cache cleared.");
+}
 
 export async function fetchAddonManifest(url: string): Promise<StremioManifest | null> {
     if (manifestCache[url]) return manifestCache[url];
 
     try {
-        const response = await fetchWithProxy(url, false);
+        const response = await fetchWithProxy(url, 0);
 
         if (!response.ok) {
             console.warn(`[MeFlix] Manifest server returned ${response.status} for ${url}`);
@@ -256,6 +263,13 @@ export async function fetchCatalog(
     includeNSFWFallback: boolean = false
 ): Promise<StremioCatalogResponse> {
     const isNSFWContext = id === 'nsfw' || includeNSFWFallback;
+    const cacheKey = `${addonUrl}_${type}_${id}`;
+
+    // Check Cache
+    const cached = catalogCache[cacheKey];
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+        return cached.data;
+    }
 
     if (DEMO_MODE) {
         let sourceArr = TRENDING_CONTENT;
@@ -330,13 +344,16 @@ export async function fetchCatalog(
 
         url += ".json";
 
-        const response = await fetchWithProxy(url);
+        const response = await fetchWithProxy(url, 0);
         if (!response.ok || response.status === 404) {
             return { metas: [] };
         }
 
         const data = await safeJson<StremioCatalogResponse>(response);
         if (!data || !data.metas) return { metas: [] };
+
+        // Save to Cache
+        catalogCache[cacheKey] = { data, timestamp: Date.now() };
 
         return data;
     } catch (err) {
@@ -374,7 +391,7 @@ export async function fetchMetadata(
     const baseUrl = addonUrl.replace("/manifest.json", "");
     const url = `${baseUrl}/meta/${type}/${id}.json`;
 
-    const response = await fetchWithProxy(url);
+    const response = await fetchWithProxy(url, 0);
     const data = await safeJson<StremioMetaResponse>(response);
     return data || { meta: null as any };
 }
@@ -398,7 +415,7 @@ export async function fetchStreams(
     const baseUrl = addonUrl.replace("/manifest.json", "");
     const url = `${baseUrl}/stream/${type}/${id}.json`;
 
-    const response = await fetchWithProxy(url);
+    const response = await fetchWithProxy(url, 1000);
     const data = await safeJson<StremioStreamResponse>(response);
     return data || { streams: [] };
 }
@@ -410,6 +427,7 @@ export async function fetchSearch(
     includeNSFW: boolean = false
 ): Promise<StremioCatalogResponse> {
     if (DEMO_MODE) {
+        // ... (keep demo mode as is or minor updates)
         console.log(`[SEARCH] Query: "${query}" | Include NSFW: ${includeNSFW}`);
         const searchTerm = query.toLowerCase();
 
@@ -421,24 +439,15 @@ export async function fetchSearch(
             ...MOCK_NSFW
         ];
 
-        console.log(`[SEARCH] Total items to search: ${allMockData.length}`);
-        console.log(`[SEARCH] First 3 items: ${allMockData.slice(0, 3).map(i => i.title).join(', ')}`);
-
-        // Filter by term AND NSFW policy
         const filtered = allMockData.filter(m => {
             const matchesSearch = m.title.toLowerCase().includes(searchTerm) ||
                 (m.description && m.description.toLowerCase().includes(searchTerm));
 
             if (!matchesSearch) return false;
-
             // If on regular page, filter out isNSFW: true
             if (!includeNSFW && m.isNSFW) return false;
-
             return true;
         });
-
-        console.log(`[SEARCH] Results found: ${filtered.length}`);
-        console.log(`[SEARCH] Result titles: ${filtered.map(r => r.title).join(', ')}`);
 
         const metas: StremioMeta[] = filtered.map(m => ({
             id: m.id,
@@ -450,17 +459,39 @@ export async function fetchSearch(
             imdbRating: m.rating,
             year: parseInt(m.year),
             releaseInfo: m.year,
-            isNSFW: m.isNSFW // Explicitly pass this through
+            isNSFW: m.isNSFW
         }));
         return { metas };
     }
 
-    const baseUrl = addonUrl.replace("/manifest.json", "");
-    const url = `${baseUrl}/catalog/${type}/search=${encodeURIComponent(query)}.json`;
+    try {
+        const manifest = await fetchAddonManifest(addonUrl);
+        if (!manifest) return { metas: [] };
 
-    const response = await fetchWithProxy(url);
-    const data = await safeJson<StremioCatalogResponse>(response);
-    return data || { metas: [] };
+        // Find the correct catalog ID for search for this type
+        // Stremio addons usually have a "search" feature in their catalogs
+        const searchCatalog = manifest.catalogs?.find(c =>
+            c.type === type &&
+            (c.extra?.some(e => e.name === 'search') || c.id === 'search' || c.id === `${type}_search`)
+        );
+
+        // Fallback to 'top' or first catalog of this type if specific search catalog not found
+        // But the pattern usually requires a catalog id.
+        const catalogId = searchCatalog?.id || (manifest.catalogs?.find(c => c.type === type)?.id) || 'top';
+
+        const baseUrl = addonUrl.replace("/manifest.json", "");
+        // Correct pattern: /catalog/{type}/{catalogId}/search={query}.json
+        const url = `${baseUrl}/catalog/${type}/${catalogId}/search=${encodeURIComponent(query)}.json`;
+
+        console.log(`[SEARCH] Fetching results for "${query}" from ${manifest.name} via ${url}`);
+
+        const response = await fetchWithProxy(url, 0);
+        const data = await safeJson<StremioCatalogResponse>(response);
+        return data || { metas: [] };
+    } catch (err) {
+        console.warn(`[SEARCH] Search failed for ${addonUrl} [${type}]:`, err instanceof Error ? err.message : String(err));
+        return { metas: [] };
+    }
 }
 
 /**
@@ -488,7 +519,7 @@ export async function fetchLiveContent(liveAddons: any[]): Promise<LiveContentIt
                     const url = `${baseUrl}/catalog/${catalog.type}/${catalog.id}.json`;
                     console.log(`[LIVE] Fetching catalog "${catalog.name || catalog.id}" (${catalog.type}) from ${manifest.name}`);
 
-                    const res = await fetchWithProxy(url);
+                    const res = await fetchWithProxy(url, 0);
                     if (!res.ok) continue;
 
                     const data = await safeJson<StremioCatalogResponse>(res);
@@ -572,7 +603,7 @@ export async function fetchNSFWContent(nsfwAddons: { url: string; name: string; 
             for (const catalog of catalogsToFetch) {
                 try {
                     const url = `${baseUrl}/catalog/${catalog.type}/${catalog.id}.json`;
-                    const res = await fetchWithProxy(url);
+                    const res = await fetchWithProxy(url, 0);
                     if (!res.ok) continue;
 
                     const data = await safeJson<StremioCatalogResponse>(res);

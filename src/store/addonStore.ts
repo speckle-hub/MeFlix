@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { StremioManifest } from "@/types/stremio";
+import { clearCatalogCache } from '@/lib/stremioService';
 
 export type AddonCategory = 'live' | 'regular' | 'nsfw-adult' | 'nsfw-hentai';
 
@@ -35,8 +36,36 @@ export const DEFAULT_ADDONS = [
         name: "Anime Kitsu"
     },
     {
-        url: "https://torrentio.strem.fun/manifest.json",
-        name: "Torrentio"
+        url: "https://addon-osvh.onrender.com/manifest.json",
+        name: "OSVH Addon"
+    },
+    {
+        url: "https://stremio-jackett.onrender.com/manifest.json",
+        name: "Jackett"
+    },
+    {
+        url: "https://1337x-stremio.vercel.app/manifest.json",
+        name: "1337x"
+    },
+    {
+        url: "https://stremio-yts.onrender.com/manifest.json",
+        name: "YTS"
+    },
+    {
+        url: "https://stremio-solidtorrents.onrender.com/manifest.json",
+        name: "SolidTorrents"
+    },
+    {
+        url: "https://stremio-nyaa.onrender.com/manifest.json",
+        name: "Nyaa"
+    },
+    {
+        url: "https://stremio-piratebay.onrender.com/manifest.json",
+        name: "The Pirate Bay"
+    },
+    {
+        url: "https://stremio-rarbg.onrender.com/manifest.json",
+        name: "RARBG"
     }
 ];
 
@@ -166,26 +195,33 @@ export const useAddonStore = create<AddonState>()(
                             manifest: manifest
                         }],
                     }));
+                    clearCatalogCache();
                     return true;
                 } catch (err) {
                     console.error(`[MeFlix] Failed to install addon: ${url}`, err);
                     return false;
                 }
             },
-            addAddon: (url, name, isNSFW = false) =>
+            addAddon: (url, name, isNSFW = false) => {
                 set((state) => ({
                     addons: [...state.addons, { url, name, isEnabled: true, isNSFW }],
-                })),
-            removeAddon: (url) =>
+                }));
+                clearCatalogCache();
+            },
+            removeAddon: (url) => {
                 set((state) => ({
                     addons: state.addons.filter((a) => a.url !== url),
-                })),
-            toggleAddon: (url) =>
+                }));
+                clearCatalogCache();
+            },
+            toggleAddon: (url) => {
                 set((state) => ({
                     addons: state.addons.map((a) =>
                         a.url === url ? { ...a, isEnabled: !a.isEnabled } : a
                     ),
-                })),
+                }));
+                clearCatalogCache();
+            },
         }),
         {
             name: "meflix-addons",

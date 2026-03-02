@@ -69,6 +69,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         }
 
         setLoading(true);
+        setResults({ movies: [], series: [], anime: [] }); // Clear old results immediately
         try {
             // Filter addons by BOTH enabled status AND NSFW safety matching current page
             const filteredAddons = addons.filter(a => a.isEnabled && a.isNSFW === isNSFWPage);

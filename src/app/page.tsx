@@ -10,12 +10,13 @@ import { useCatalog } from "@/hooks/useCatalog";
 import { useProgressStore } from "@/store/progressStore";
 import { useMangaStore } from "@/store/mangaStore";
 import { ContentGridSkeleton } from "@/components/ui/Skeleton";
-import { AlertCircle, PlayCircle, BookOpen } from "lucide-react";
+import { AlertCircle, PlayCircle, BookOpen, RefreshCw } from "lucide-react";
+import { clearCatalogCache } from "@/lib/stremioService";
 
 export default function Home() {
   const handleRefresh = async () => {
-    // In a real app, this would re-fetch data
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    clearCatalogCache();
+    await new Promise(resolve => setTimeout(resolve, 800));
     window.location.reload();
   };
 

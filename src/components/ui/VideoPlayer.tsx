@@ -98,7 +98,15 @@ export default function VideoPlayer({
             hlsRef.current = null;
         }
 
-        const isHls = url.includes('.m3u8') || url.includes('m3u8');
+        // --- NSFW PROXY LOGIC ---
+        let finalUrl = url;
+        if (isNSFW) {
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            finalUrl = `${origin}/api/proxy-stream?url=${encodeURIComponent(url)}`;
+            console.log('[NSFW] Using stream proxy:', finalUrl);
+        }
+
+        const isHls = finalUrl.includes('.m3u8') || finalUrl.includes('m3u8');
 
         if (isHls) {
             if (Hls.isSupported()) {
@@ -107,10 +115,14 @@ export default function VideoPlayer({
                     liveSyncDuration: 3,
                     liveMaxLatencyDuration: 10,
                     maxBufferLength: isLive ? 10 : 30,
+                    // Pass headers if needed, but proxy handles most
                 });
                 hlsRef.current = hls;
-                hls.loadSource(url);
+                hls.loadSource(finalUrl);
                 hls.attachMedia(video);
+
+                // Set attributes that might cause lint issues in JSX
+                video.setAttribute('referrerpolicy', 'no-referrer');
 
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     setIsLoading(false);
@@ -121,22 +133,33 @@ export default function VideoPlayer({
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('[HLS ERROR]', {
+                        event,
+                        type: data.type,
+                        details: data.details,
+                        fatal: data.fatal,
+                        url: finalUrl,
+                        source: addonId || addonBaseUrl
+                    });
+
                     if (data.fatal) {
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
-                                if (isLive && retryCountRef.current < MAX_RETRIES) {
+                                if (retryCountRef.current < MAX_RETRIES) {
                                     retryCountRef.current++;
                                     setIsReconnecting(true);
+                                    console.log(`[HLS] Network error, retrying (${retryCountRef.current}/${MAX_RETRIES})...`);
                                     setTimeout(() => {
                                         hls.startLoad();
                                         setIsReconnecting(false);
                                     }, 3000);
                                 } else {
-                                    setStreamError('Live stream connection lost. Try another source.');
+                                    setStreamError(`Stream connection failed. ${isNSFW ? 'NSFW Proxy error or source offline.' : 'Try another source.'}`);
                                     hls.destroy();
                                 }
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log('[HLS] Media error, attempting recovery...');
                                 hls.recoverMediaError();
                                 break;
                             default:
@@ -148,14 +171,14 @@ export default function VideoPlayer({
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 // Safari native HLS support
-                video.src = url;
+                video.src = finalUrl;
                 video.muted = true;
                 setIsMuted(true);
                 safePlay();
             }
         } else {
             // Direct MP4/other format
-            video.src = url;
+            video.src = finalUrl;
             video.muted = true;
             setIsMuted(true);
             safePlay();
@@ -167,7 +190,7 @@ export default function VideoPlayer({
                 hlsRef.current = null;
             }
         };
-    }, [url, isLive]);
+    }, [url, isLive, isNSFW]);
 
     const safePlay = useCallback(async () => {
         const video = videoRef.current;
@@ -476,11 +499,17 @@ export default function VideoPlayer({
                         if (!e.isPrimary) return;
 
                         const rect = e.currentTarget.getBoundingClientRect();
-                        const edgePadding = 24;
+                        const edgePadding = 20; // 20px edge ignore
+
+                        // Rule: Ignore edges to avoid conflicts with browser gestures
                         if (e.clientX < rect.left + edgePadding || e.clientX > rect.right - edgePadding) return;
 
+                        // Rule: Do not start gesture if touching a control
                         const target = e.target as HTMLElement;
-                        if (target.closest('button, input, a, [role="button"]')) return;
+                        if (target.closest('button, input, a, [role="button"], .slider-thumb')) return;
+
+                        // Rule: Ignore multi-touch (usually browser handles pinch/zoom)
+                        // Note: Pointer events handle multi-touch via focus/primary, but we check again on move.
 
                         // Capture pointer so we don't lose moves if finger slides off element
                         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -515,7 +544,12 @@ export default function VideoPlayer({
                         const rect = e.currentTarget.getBoundingClientRect();
 
                         if (!activeGesture) {
-                            if (Math.abs(deltaY) > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
+                            // Deadzone check: 10px threshold
+                            const threshold = 10;
+                            const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                            if (dist < threshold) return;
+
+                            if (Math.abs(deltaY) > Math.abs(deltaX)) {
                                 gestureRef.current.didGesture = true;
                                 const relativeX = e.clientX - rect.left;
                                 if (relativeX < rect.width / 2) {
