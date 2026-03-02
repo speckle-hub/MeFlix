@@ -8,14 +8,16 @@ import { useProfileStore } from "@/store/profileStore";
 
 const BASE_NAV_ITEMS = [
     { name: "Home", href: "/", icon: Home },
-    { name: "Search", href: "/search", icon: Search },
+    { name: "Search", href: "#", icon: Search },
     { name: "Movies", href: "/movies", icon: Film },
     { name: "TV Shows", href: "/tv", icon: Tv },
     { name: "Anime", href: "/anime", icon: PlaySquare },
     { name: "Manga", href: "/manga", icon: BookOpen },
     { name: "Live", href: "/live", icon: Radio, color: "text-red-500" },
+    { name: "Lists", href: "/lists", icon: Bookmark },
     { name: "Watchlist", href: "/watchlist", icon: Bookmark },
     { name: "Addons", href: "/settings/addons", icon: Globe },
+    { name: "Settings", href: "/settings", icon: Globe },
 ];
 
 const NSFW_NAV_ITEM = { name: "NSFW", href: "/nsfw", icon: ShieldAlert, color: "text-rose-400" };
@@ -28,7 +30,7 @@ export default function Sidebar() {
         : BASE_NAV_ITEMS;
 
     return (
-        <aside className="fixed left-0 top-0 hidden h-full w-64 flex-col border-r border-white/5 bg-background p-6 md:flex">
+        <aside className="flex h-full w-full flex-col p-6">
             <div className="mb-10 flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-white font-bold text-xl">
                     M

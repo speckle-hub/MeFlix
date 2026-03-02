@@ -53,14 +53,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
             {/* Desktop Sidebar with scroll-responsive border */}
             <div className={cn(
-                "fixed left-0 top-0 z-40 h-full w-64 transition-all duration-300 hidden md:block",
+                "fixed left-0 top-0 z-50 h-full w-64 transition-all duration-300 hidden md:block",
                 isScrolled ? "border-r border-white/10" : "border-r border-transparent"
             )}>
                 <Sidebar />
             </div>
 
             {/* Main Content Area */}
-            <main className="flex-1 transition-all duration-300 md:ml-64 pt-16 md:pt-0 pb-24 md:pb-0">
+            <main className="relative z-0 flex-1 transition-all duration-300 md:ml-64 pt-16 md:pt-0 pb-24 md:pb-0">
                 <div className="mx-auto w-full max-w-(--breakpoint-2xl) p-4 md:p-8">
                     <PageTransition>
                         {children}
