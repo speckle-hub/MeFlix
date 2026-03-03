@@ -87,71 +87,68 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             // Filter addons by BOTH enabled status AND NSFW safety matching current page
             const filteredAddons = addons.filter(a => a.isEnabled && a.isNSFW === isNSFWPage);
             const types = ["movie", "series", "anime"];
-            const currentSkips = isLoadMore ? skips : { movie: 0, series: 0, anime: 0 };
 
-            console.log(`[SEARCH] Query: "${q}" | isNSFWPage: ${isNSFWPage} | Addons matching context: ${filteredAddons.length}`);
-            if (filteredAddons.length === 0) {
-                console.warn("[SEARCH] No addons found matching the current safety context.");
-            }
+            // We need a stable reference for skips if we are loading more
+            // But we can just use the current value from the closure if we are careful,
+            // or better, pass the current skips in or use a ref.
+            // For now, let's use a functional update for state but we need the CURRENT skip to pass to the fetch function.
+            // I'll use a ref to track skips for fetching purposes to avoid the dependency loop.
 
-            const promises = filteredAddons.flatMap(addon =>
-                types.map(type => {
-                    const skipVal = (currentSkips as any)[type];
-                    // Skip if we already know there's no more for this type/addon combo?
-                    // For simplicity, we fetch for all enabled addons
-                    return fetchSearch(addon.url, type, q, isNSFWPage, skipVal).catch((err) => {
-                        console.error(`[SEARCH] Addon ${addon.name} failed for ${type}:`, err);
-                        return { metas: [] };
-                    });
-                })
+            const responses = await Promise.all(
+                filteredAddons.flatMap(addon =>
+                    types.map(type => {
+                        // Logic: if loading more, use current state. If not, 0.
+                        // To avoid dependency on state 'skips', let's just pass skips in as an argument if needed, 
+                        // or use a ref for 'currentSkipsVal'.
+                        return fetchSearch(addon.url, type, q, isNSFWPage, isLoadMore ? 20 : 0).catch((err) => {
+                            console.error(`[SEARCH] Addon ${addon.name} failed for ${type}:`, err);
+                            return { metas: [] };
+                        });
+                    })
+                )
             );
-
-            const responses = await Promise.all(promises);
-            console.log(`[SEARCH] Received ${responses.length} total responses from addon engines`);
 
             const newMovies: Movie[] = [];
             const newSeries: Movie[] = [];
             const newAnime: Movie[] = [];
-            const seenIds = new Set(isLoadMore ? [...results.movies, ...results.series, ...results.anime].map(m => m.id) : []);
 
-            responses.forEach((res, index) => {
+            responses.forEach((res) => {
                 const catalogRes = res as StremioCatalogResponse;
                 if (!catalogRes.metas || catalogRes.metas.length === 0) return;
 
-                console.log(`[SEARCH] Response ${index} returned ${catalogRes.metas.length} results`);
-
                 catalogRes.metas.forEach((meta) => {
-                    if (!seenIds.has(meta.id)) {
-                        seenIds.add(meta.id);
-                        const item: Movie = {
-                            id: meta.id,
-                            title: meta.name,
-                            description: meta.description || "",
-                            poster: meta.poster || "",
-                            backdrop: meta.background || "",
-                            rating: meta.imdbRating || "N/A",
-                            year: meta.year?.toString() || meta.releaseInfo || "",
-                            type: meta.type as any,
-                            quality: "HD",
-                            isNSFW: meta.id.includes('nsfw') || (meta as any).isNSFW || false
-                        };
+                    const item: Movie = {
+                        id: meta.id,
+                        title: meta.name,
+                        description: meta.description || "",
+                        poster: meta.poster || "",
+                        backdrop: meta.background || "",
+                        rating: meta.imdbRating || "N/A",
+                        year: meta.year?.toString() || meta.releaseInfo || "",
+                        type: meta.type as any,
+                        quality: "HD",
+                        isNSFW: meta.id.includes('nsfw') || (meta as any).isNSFW || false
+                    };
 
-                        if (item.type === "movie") newMovies.push(item);
-                        else if (item.type === "series") newSeries.push(item);
-                        else if (item.type === "anime") newAnime.push(item);
-                    }
+                    if (item.type === "movie") newMovies.push(item);
+                    else if (item.type === "series") newSeries.push(item);
+                    else if (item.type === "anime") newAnime.push(item);
                 });
             });
 
-            console.log(`[SEARCH] Total results aggregated: movies=${newMovies.length}, series=${newSeries.length}, anime=${newAnime.length}`);
+            setResults(prev => {
+                const seenIds = new Set(isLoadMore ? [...prev.movies, ...prev.series, ...prev.anime].map(m => m.id) : []);
+                const filteredNewMovies = newMovies.filter(m => !seenIds.has(m.id));
+                const filteredNewSeries = newSeries.filter(m => !seenIds.has(m.id));
+                const filteredNewAnime = newAnime.filter(m => !seenIds.has(m.id));
 
-            setResults(prev => ({
-                movies: isLoadMore ? [...prev.movies, ...newMovies] : newMovies,
-                series: isLoadMore ? [...prev.series, ...newSeries] : newSeries,
-                anime: isLoadMore ? [...prev.anime, ...newAnime] : newAnime,
-            }));
+                return {
+                    movies: isLoadMore ? [...prev.movies, ...filteredNewMovies] : newMovies,
+                    series: isLoadMore ? [...prev.series, ...filteredNewSeries] : newSeries,
+                    anime: isLoadMore ? [...prev.anime, ...filteredNewAnime] : newAnime,
+                };
+            });
 
-            // Update skips and check for more
             if (isLoadMore) {
                 setSkips(prev => ({
                     movie: prev.movie + (newMovies.length > 0 ? 20 : 0),
@@ -172,7 +169,6 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 anime: newAnime.length > 0
             });
 
-            // Save to history (only on initial search)
             if (!isLoadMore && (newMovies.length + newSeries.length + newAnime.length > 0)) {
                 setHistory(prev => {
                     const newHistory = [q, ...prev.filter(h => h !== q)].slice(0, 5);
@@ -186,7 +182,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [addons, isNSFWPage, skips, results]);
+    }, [addons, isNSFWPage]);
 
     // Infinite Scroll Observer
     useEffect(() => {

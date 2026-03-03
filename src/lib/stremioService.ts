@@ -350,15 +350,18 @@ export async function fetchCatalog(
         }
 
         const data = await safeJson<StremioCatalogResponse>(response);
-        if (!data || !data.metas) return { metas: [] };
+        const finalData = (data && data.metas) ? data : { metas: [] };
 
-        // Save to Cache
-        catalogCache[cacheKey] = { data, timestamp: Date.now() };
+        // Save to Cache - ALWAYS save, even if empty, to prevent fetch loops
+        catalogCache[cacheKey] = { data: finalData, timestamp: Date.now() };
 
-        return data;
+        return finalData;
     } catch (err) {
         console.warn(`[MeFlix] Catalog fetch failed for ${addonUrl} [${type}/${resolvedId}]:`, err instanceof Error ? err.message : String(err));
-        return { metas: [] };
+        const emptyData = { metas: [] };
+        // Save failure to cache briefly to prevent immediate retry loop
+        catalogCache[cacheKey] = { data: emptyData, timestamp: Date.now() };
+        return emptyData;
     }
 }
 

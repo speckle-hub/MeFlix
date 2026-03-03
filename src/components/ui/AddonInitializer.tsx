@@ -3,47 +3,41 @@
 import { useEffect, useRef } from "react";
 import { useAddonStore, DEFAULT_ADDONS, DEFAULT_LIVE_ADDONS, DEFAULT_NSFW_ADULT_ADDONS, DEFAULT_NSFW_HENTAI_ADDONS } from "@/store/addonStore";
 
-const ADDON_INIT_VERSION = 8; // Version 8: Synchronizing new 8 default addons & pruning Torrentio
+const ADDON_INIT_VERSION = 10; // Version 10: Hydration-aware & strict Torrentio ban
 
 export function AddonInitializer() {
-    const { addons, installAddon, removeAddon } = useAddonStore();
+    const installAddon = useAddonStore(state => state.installAddon);
+    const removeAddon = useAddonStore(state => state.removeAddon);
+    const isHydrated = useAddonStore(state => state.isHydrated);
     const initialized = useRef(false);
 
     useEffect(() => {
-        if (initialized.current) return;
+        // Wait for store to hydrate and ensure we only run once
+        if (!isHydrated || initialized.current) return;
         initialized.current = true;
 
         const init = async () => {
-            console.log("[ADDON INIT] Starting versioned initialization...");
+            console.log("[ADDON INIT] Starting hydration-aware versioned initialization...");
 
-            // Temporary migration for legacy users
-            if (localStorage.getItem('addons_initialized') && !localStorage.getItem('addon_init_version')) {
-                console.log("[ADDON INIT] Migrating legacy user to versioned system...");
-                localStorage.removeItem('addons_initialized');
-                localStorage.setItem('addon_init_version', '0');
-            }
+            // Use getState() for the most current values without subscribing to changes
+            const { addons } = useAddonStore.getState();
 
             const currentVersion = parseInt(localStorage.getItem('addon_init_version') || '0');
             console.log(`[ADDON INIT] Current version: ${currentVersion} | Target: ${ADDON_INIT_VERSION}`);
 
-            if (currentVersion < ADDON_INIT_VERSION) {
-                console.log("[ADDON INIT] Update required. Cleaning up legacy addons...");
-
-                // EXPLICIT PRUNING: Remove Torrentio and other legacy/offline addons
-                const forbiddenUrls = [
-                    "https://torrentio.strem.fun/manifest.json",
-                    "https://torrentio.strem.io/manifest.json",
-                    "https://stremio-jackett.onrender.com/manifest.json",
-                    "https://1337x-stremio.vercel.app/manifest.json",
-                    "https://stremio-yts.onrender.com/manifest.json",
-                ];
-
-                for (const url of forbiddenUrls) {
-                    if (addons.some(a => a.url === url)) {
-                        console.log(`[ADDON INIT] Pruning forbidden/legacy addon: ${url}`);
-                        removeAddon(url);
+            // ALWAYS check for any Torrentio URLs regardless of version
+            const hasTorrentio = addons.some(a => a.url.toLowerCase().includes('torrentio'));
+            if (hasTorrentio) {
+                console.log("[ADDON INIT] Detected forbidden Torrentio addon. Purging...");
+                addons.forEach(a => {
+                    if (a.url.toLowerCase().includes('torrentio')) {
+                        removeAddon(a.url);
                     }
-                }
+                });
+            }
+
+            if (currentVersion < ADDON_INIT_VERSION) {
+                console.log("[ADDON INIT] Update required. Ensuring default addons are present...");
 
                 const allDefaults = [
                     ...DEFAULT_ADDONS.map(a => ({ ...a, category: 'regular' as const })),
@@ -53,47 +47,27 @@ export function AddonInitializer() {
                 ];
 
                 for (const def of allDefaults) {
-                    const isInstalled = addons.some(a => a.url === def.url);
-                    // Force re-installation for version 8 to ensure metadata and categories are correct
-                    if (!isInstalled || currentVersion < 8) {
-                        console.log(`[ADDON INIT] Installing/Updating default [${def.category}]: ${def.name || def.url}`);
+                    const currentAddons = useAddonStore.getState().addons;
+                    const isInstalled = currentAddons.some(a => a.url === def.url);
+
+                    // Re-install if missing or if version is low (to force update name/category)
+                    if (!isInstalled || currentVersion < 10) {
                         try {
-                            const success = await installAddon(def.url, false, def.category);
-                            if (success) {
-                                console.log(`[ADDON INIT] Successfully updated: ${def.name}`);
-                            } else {
-                                console.warn(`[ADDON INIT] Failed to update: ${def.url}`);
-                            }
+                            await installAddon(def.url, false, def.category);
                         } catch (err) {
                             console.error(`[ADDON INIT] Error updating ${def.url}:`, err);
                         }
-                        // Small stagger to avoid overwhelming proxies
-                        await new Promise(resolve => setTimeout(resolve, 800));
+                        await new Promise(resolve => setTimeout(resolve, 300));
                     }
                 }
 
                 localStorage.setItem('addon_init_version', String(ADDON_INIT_VERSION));
                 console.log(`[ADDON INIT] Initialized to version ${ADDON_INIT_VERSION}`);
-            } else {
-                console.log("[ADDON INIT] Already at latest version.");
             }
-
-            // Final debug logging
-            const currentAddons = useAddonStore.getState().addons;
-            console.log('[ADDON INIT] Final addon state:', currentAddons.map(a => ({
-                name: a.name,
-                url: a.url,
-                category: a.category,
-                enabled: a.isEnabled
-            })));
-
-            console.log('[ADDON INIT] Live addons available:', currentAddons.filter(a => a.category === 'live').length);
         };
 
-        if (addons) {
-            init();
-        }
-    }, [addons, installAddon]);
+        init();
+    }, [isHydrated, installAddon, removeAddon]);
 
     return null;
 }

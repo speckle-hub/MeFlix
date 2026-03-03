@@ -8,12 +8,16 @@ import { toast } from "sonner";
 import { WifiOff } from "lucide-react";
 
 export function useCatalog(type: string, id: string, extra?: Record<string, string>) {
-    const { addons } = useAddonStore();
+    const addons = useAddonStore(state => state.addons);
     const [data, setData] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Stable string representation of extra to prevent loop if passed as object literal
+    const extraKey = JSON.stringify(extra || {});
+
     const fetchData = useCallback(async () => {
+        // Prevent clearing data if we're just updating
         setLoading(true);
         setError(null);
 
@@ -60,7 +64,13 @@ export function useCatalog(type: string, id: string, extra?: Record<string, stri
 
                         if (newMetas.length > 0) {
                             aggregatedResults = [...aggregatedResults, ...newMetas];
-                            setData([...aggregatedResults]); // Show partial results
+                            setData(prev => {
+                                // De-duplicate with previous results from other addons
+                                const prevIds = new Set(prev.map(p => p.id));
+                                const trulyNew = newMetas.filter(m => !prevIds.has(m.id));
+                                if (trulyNew.length === 0) return prev;
+                                return [...prev, ...trulyNew];
+                            });
                         }
                     }
                 } catch (e) {
@@ -82,7 +92,7 @@ export function useCatalog(type: string, id: string, extra?: Record<string, stri
         } finally {
             setLoading(false);
         }
-    }, [addons, type, id, extra]);
+    }, [addons, type, id, extraKey]); // Use extraKey instead of extra object
 
     useEffect(() => {
         fetchData();

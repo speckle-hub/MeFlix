@@ -31,9 +31,9 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     }, [accentColor, backgroundBrightness]);
 
     return (
-        <>
+        <div className="relative min-h-screen">
             {isWinter && <SeasonalOverlay />}
             {children}
-        </>
+        </div>
     );
 }

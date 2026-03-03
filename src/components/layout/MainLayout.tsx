@@ -1,75 +1,62 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
-import MobileHeader from "./MobileHeader";
-import PageTransition from "./PageTransition";
-import SearchModal from "../ui/SearchModal";
-import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 import { useAddonStore } from "@/store/addonStore";
 import { setServiceDemoMode } from "@/lib/stremioService";
+import SearchModal from "@/components/ui/SearchModal";
+import { AnimatePresence } from "framer-motion";
 
-interface MainLayoutProps {
-    children: React.ReactNode;
-}
-
-export default function MainLayout({ children }: MainLayoutProps) {
-    const [isScrolled, setIsScrolled] = useState(false);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
+export default function MainLayout({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
     const { isDemoMode } = useAddonStore();
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-    // Sync Demo Mode with Service
+    // Sync demo mode to service for server-side consistency
     useEffect(() => {
         setServiceDemoMode(isDemoMode);
     }, [isDemoMode]);
 
+    // Global Search event listener
     useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
-        };
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-                e.preventDefault();
-                setIsSearchOpen(true);
-            }
-        };
         const handleOpenSearch = () => setIsSearchOpen(true);
-        window.addEventListener("scroll", handleScroll, { passive: true });
-        window.addEventListener("keydown", handleKeyDown);
-        window.addEventListener("meflix:open-search", handleOpenSearch);
-        return () => {
-            window.removeEventListener("scroll", handleScroll);
-            window.removeEventListener("keydown", handleKeyDown);
-            window.removeEventListener("meflix:open-search", handleOpenSearch);
-        };
+        window.addEventListener('open-search', handleOpenSearch);
+        return () => window.removeEventListener('open-search', handleOpenSearch);
     }, []);
 
+    const isVideoPage = pathname?.startsWith('/video/');
+
+    if (isVideoPage) {
+        return <>{children}</>;
+    }
+
     return (
-        <div className="flex min-h-screen flex-col bg-background text-white">
-            <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-
-            <MobileHeader />
-
-            {/* Desktop Sidebar with scroll-responsive border */}
-            <div className={cn(
-                "fixed left-0 top-0 z-50 h-full w-64 transition-all duration-300 hidden md:block",
-                isScrolled ? "border-r border-white/10" : "border-r border-transparent"
-            )}>
+        <div className="min-h-screen bg-black text-white selection:bg-accent selection:text-white">
+            {/* Desktop Sidebar */}
+            <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-40 border-r border-white/5 bg-background shadow-xl">
                 <Sidebar />
             </div>
 
-            {/* Main Content Area */}
-            <main className="relative z-0 flex-1 transition-all duration-300 md:ml-64 pt-16 md:pt-0 pb-24 md:pb-0">
-                <div className="mx-auto w-full max-w-(--breakpoint-2xl) p-4 md:p-8">
-                    <PageTransition>
-                        {children}
-                    </PageTransition>
+            {/* Main Content */}
+            <main className="md:pl-64 pb-20 md:pb-0 min-h-screen flex flex-col relative z-0">
+                <div className="flex-grow">
+                    {children}
                 </div>
             </main>
 
             {/* Mobile Bottom Navigation */}
-            <BottomNav />
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+                <BottomNav />
+            </div>
+
+            {/* Search Modal */}
+            <AnimatePresence>
+                {isSearchOpen && (
+                    <SearchModal onClose={() => setIsSearchOpen(false)} />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

@@ -19,11 +19,13 @@ interface Addon {
 interface AddonState {
     addons: Addon[];
     isDemoMode: boolean;
+    isHydrated: boolean;
     installAddon: (url: string, isNSFW?: boolean, category?: AddonCategory) => Promise<boolean>;
     addAddon: (url: string, name: string, isNSFW?: boolean) => void;
     removeAddon: (url: string) => void;
     toggleAddon: (url: string) => void;
     setDemoMode: (value: boolean) => void;
+    setHydrated: (value: boolean) => void;
 }
 // Default addons list
 export const DEFAULT_ADDONS = [
@@ -147,7 +149,9 @@ export const useAddonStore = create<AddonState>()(
         (set, get) => ({
             addons: [], // Start empty for active installation
             isDemoMode: false,
+            isHydrated: false,
             setDemoMode: (isDemoMode) => set({ isDemoMode }),
+            setHydrated: (isHydrated) => set({ isHydrated }),
             installAddon: async (url, isNSFW = false, category?: AddonCategory) => {
                 // If no URL provided, install defaults
                 if (!url) {
@@ -225,6 +229,9 @@ export const useAddonStore = create<AddonState>()(
         }),
         {
             name: "meflix-addons",
+            onRehydrateStorage: () => (state) => {
+                state?.setHydrated(true);
+            },
         }
     )
 );

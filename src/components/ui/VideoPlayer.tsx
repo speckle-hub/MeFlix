@@ -132,7 +132,7 @@ export default function VideoPlayer({
                     safePlay();
                 });
 
-                hls.on(Hls.Events.ERROR, (event, data) => {
+                hls.on(Hls.Events.ERROR, async (event, data) => {
                     console.error('[HLS ERROR]', {
                         event,
                         type: data.type,
@@ -145,6 +145,25 @@ export default function VideoPlayer({
                     if (data.fatal) {
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
+                                // If it's a proxied stream and we have a network error, try to get the JSON reason
+                                const responseCode = data.response?.code;
+                                if (isNSFW && ((responseCode !== undefined && responseCode >= 400) || data.details === 'manifestLoadError')) {
+                                    try {
+                                        const errorRes = await fetch(finalUrl);
+                                        if (!errorRes.ok) {
+                                            const errorData = await errorRes.json();
+                                            if (errorData.error) {
+                                                setStreamError(`Stream Error: ${errorData.error}. ${errorData.message || errorData.details || ''}`);
+                                                setIsLoading(false);
+                                                hls.destroy();
+                                                return; // Stop here if we found a clear proxy error
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.warn('[VideoPlayer] Failed to fetch proxy error details:', e);
+                                    }
+                                }
+
                                 if (retryCountRef.current < MAX_RETRIES) {
                                     retryCountRef.current++;
                                     setIsReconnecting(true);

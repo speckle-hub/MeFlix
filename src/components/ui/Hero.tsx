@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Info, ChevronLeft, ChevronRight } from "lucide-react";
@@ -116,22 +117,20 @@ export default function Hero({ movies, loading }: HeroProps) {
                                 </motion.p>
 
                                 <div className="flex flex-wrap gap-4">
-                                    <motion.button
-                                        whileHover={{ scale: 1.05, y: -2 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        className="flex items-center gap-3 rounded-2xl bg-white px-10 py-5 font-black text-black transition-all shadow-[0_20px_50px_rgba(0,0,0,0.4)]"
+                                    <Link
+                                        href={`/meta/${movie.type}/${movie.id.includes(':') ? movie.id.split(':')[0] : movie.id}`}
+                                        className="flex items-center gap-3 rounded-2xl bg-white px-10 py-5 font-black text-black transition-all shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:scale-105 active:scale-95"
                                     >
                                         <Play className="h-6 w-6 fill-current" />
                                         WATCH NOW
-                                    </motion.button>
-                                    <motion.button
-                                        whileHover={{ scale: 1.05, y: -2, backgroundColor: "rgba(255, 255, 255, 0.2)" }}
-                                        whileTap={{ scale: 0.95 }}
-                                        className="flex items-center gap-3 rounded-2xl bg-white/10 glass px-10 py-5 font-black text-white transition-all shadow-xl"
+                                    </Link>
+                                    <Link
+                                        href={`/meta/${movie.type}/${movie.id.includes(':') ? movie.id.split(':')[0] : movie.id}`}
+                                        className="flex items-center gap-3 rounded-2xl bg-white/10 glass px-10 py-5 font-black text-white transition-all shadow-xl hover:scale-105 active:scale-95"
                                     >
                                         <Info className="h-6 w-6" />
                                         DETAILS
-                                    </motion.button>
+                                    </Link>
                                 </div>
                             </motion.div>
 
