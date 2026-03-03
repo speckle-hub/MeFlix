@@ -100,8 +100,11 @@ export default function VideoPlayer({
 
         // --- SMART PROXY LOGIC ---
         // Only these domains actually need proxying due to CORS/geo-blocking
-        const DOMAINS_REQUIRING_PROXY: string[] = [];
-        // We'll add real domains here later if specific sources need it
+        const DOMAINS_REQUIRING_PROXY = [
+            '1080p.workers.dev',
+            'nightbreed821.site',
+            'workers.dev' // Catch-all for Cloudflare workers which often block CORS
+        ];
 
         function shouldProxy(streamUrl: string): boolean {
             try {

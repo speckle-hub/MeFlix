@@ -85,9 +85,8 @@ export default function MetaPage({ params }: MetaPageProps) {
     }, []);
 
     const handleWatchNow = () => {
-        // Bypass season selector if we are in fallback mode (no episode data)
-        const hasVideos = (meta?.videos?.length ?? 0) > 0;
-        if (type === "series" && !nsfwFallback && hasVideos) {
+        // Force season selector for all series to ensure we get an episode-specific ID
+        if (type === "series") {
             // On mobile, we might want to scroll to the accordion instead of opening the modal
             if (window.innerWidth < 768) {
                 const element = document.getElementById('episodes-section');
@@ -96,9 +95,10 @@ export default function MetaPage({ params }: MetaPageProps) {
                     return;
                 }
             }
+            console.log('[META] Opening season selector for series');
             setShowSeasonSelector(true);
         } else {
-            console.log('[META] Skipping season selector for NSFW/Fallback content');
+            console.log('[META] Opening stream selector for movie');
             setShowSelector(true);
         }
     };
