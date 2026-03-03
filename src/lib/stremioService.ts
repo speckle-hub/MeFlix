@@ -404,22 +404,14 @@ export async function fetchStreams(
     type: string,
     id: string
 ): Promise<StremioStreamResponse> {
-    if (DEMO_MODE) {
-        return {
-            streams: [
-                {
-                    title: "1080p | Direct | Demo",
-                    url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
-                }
-            ]
-        };
-    }
+    console.log(`[STREAMS] Fetching from ${addonUrl} for ${type}/${id}`);
 
     const baseUrl = addonUrl.replace("/manifest.json", "");
     const url = `${baseUrl}/stream/${type}/${id}.json`;
 
-    const response = await fetchWithProxy(url, 1000);
+    const response = await fetchWithProxy(url, 0); // No delay for stream fetching
     const data = await safeJson<StremioStreamResponse>(response);
+    console.log(`[STREAMS] Result from ${addonUrl}:`, data?.streams?.length || 0, 'streams');
     return data || { streams: [] };
 }
 

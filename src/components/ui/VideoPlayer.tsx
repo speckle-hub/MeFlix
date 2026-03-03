@@ -98,13 +98,38 @@ export default function VideoPlayer({
             hlsRef.current = null;
         }
 
-        // --- NSFW PROXY LOGIC ---
-        let finalUrl = url;
-        if (isNSFW) {
-            const origin = typeof window !== 'undefined' ? window.location.origin : '';
-            finalUrl = `${origin}/api/proxy-stream?url=${encodeURIComponent(url)}`;
-            console.log('[NSFW] Using stream proxy:', finalUrl);
+        // --- SMART PROXY LOGIC ---
+        // Only these domains actually need proxying due to CORS/geo-blocking
+        const DOMAINS_REQUIRING_PROXY: string[] = [];
+        // We'll add real domains here later if specific sources need it
+
+        function shouldProxy(streamUrl: string): boolean {
+            try {
+                const hostname = new URL(streamUrl).hostname;
+                return DOMAINS_REQUIRING_PROXY.some(domain => hostname.includes(domain));
+            } catch {
+                return false;
+            }
         }
+
+        const isHlsManifest = url.includes('.m3u8');
+        let finalUrl = url;
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+
+        if (isHlsManifest && shouldProxy(url)) {
+            console.warn('[VideoPlayer] Skipping proxy for HLS manifest - not supported without rewriting');
+            finalUrl = url;
+        } else if (shouldProxy(url)) {
+            finalUrl = `${origin}/api/proxy-stream?url=${encodeURIComponent(url)}`;
+        }
+
+        console.log('[VideoPlayer] Stream info:', {
+            originalUrl: url,
+            finalUrl,
+            isHLS: isHlsManifest,
+            isNSFW,
+            wasProxied: finalUrl !== url
+        });
 
         const isHls = finalUrl.includes('.m3u8') || finalUrl.includes('m3u8');
 
