@@ -54,7 +54,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             {/* Search Modal */}
             <AnimatePresence>
                 {isSearchOpen && (
-                    <SearchModal onClose={() => setIsSearchOpen(false)} />
+                    <SearchModal
+                        isOpen={isSearchOpen}
+                        onClose={() => setIsSearchOpen(false)}
+                    />
                 )}
             </AnimatePresence>
         </div>
