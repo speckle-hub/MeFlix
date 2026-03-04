@@ -102,29 +102,44 @@ export default function VideoPlayer({
         // Only these domains actually need proxying due to CORS/geo-blocking
         const DOMAINS_REQUIRING_PROXY = [
             '1080p.workers.dev',
+            'p.10820.workers.dev', // OSVH streams
             'nightbreed821.site',
-            'workers.dev' // Catch-all for Cloudflare workers which often block CORS
+            'workers.dev' // Catch-all for Cloudflare workers
         ];
+
+        // Domains that should NEVER be proxied (e.g., direct download links that break under proxy)
+        const DOMAINS_BYPASSING_PROXY = [
+            'pixeldrain.com' // Audio tracks often fail through proxy
+        ];
+
+        console.log('[VideoPlayer] Stream URL Debug:', url);
 
         function shouldProxy(streamUrl: string): boolean {
             try {
-                const hostname = new URL(streamUrl).hostname;
+                const urlObj = new URL(streamUrl);
+                const hostname = urlObj.hostname;
+
+                // Explicit bypass
+                if (DOMAINS_BYPASSING_PROXY.some(domain => hostname.includes(domain))) {
+                    console.log('[VideoPlayer] Bypassing proxy for direct link:', hostname);
+                    return false;
+                }
+
                 return DOMAINS_REQUIRING_PROXY.some(domain => hostname.includes(domain));
             } catch {
                 return false;
             }
         }
 
-        const isHlsManifest = url.includes('.m3u8');
         let finalUrl = url;
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-        if (isHlsManifest && shouldProxy(url)) {
-            console.warn('[VideoPlayer] Skipping proxy for HLS manifest - not supported without rewriting');
-            finalUrl = url;
-        } else if (shouldProxy(url)) {
+        if (shouldProxy(url)) {
+            console.log('[VideoPlayer] Proxying regulated domain:', url);
             finalUrl = `${origin}/api/proxy-stream?url=${encodeURIComponent(url)}`;
         }
+
+        const isHlsManifest = url.includes('.m3u8') || url.includes('m3u8');
 
         console.log('[VideoPlayer] Stream info:', {
             originalUrl: url,
@@ -215,6 +230,10 @@ export default function VideoPlayer({
                                 break;
                         }
                     }
+                });
+
+                hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (event, data) => {
+                    console.log('[HLS] Audio tracks:', data.audioTracks);
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 // Safari native HLS support

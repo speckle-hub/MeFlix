@@ -392,7 +392,10 @@ export async function fetchMetadata(
     }
 
     const baseUrl = addonUrl.replace("/manifest.json", "");
-    const url = `${baseUrl}/meta/${type}/${id}.json`;
+    // Intelligent encoding: URLs or IDs with slashes MUST be encoded.
+    const needsEncoding = id.includes('/') || id.includes('http');
+    const encodedId = needsEncoding ? encodeURIComponent(id) : id;
+    const url = `${baseUrl}/meta/${type}/${encodedId}.json`;
 
     const response = await fetchWithProxy(url, 0);
     const data = await safeJson<StremioMetaResponse>(response);
@@ -407,7 +410,10 @@ export async function fetchStreams(
     console.log(`[STREAMS] Fetching from ${addonUrl} for ${type}/${id}`);
 
     const baseUrl = addonUrl.replace("/manifest.json", "");
-    const url = `${baseUrl}/stream/${type}/${id}.json`;
+    // Intelligent encoding: URLs or IDs with slashes MUST be encoded.
+    const needsEncoding = id.includes('/') || id.includes('http');
+    const encodedId = needsEncoding ? encodeURIComponent(id) : id;
+    const url = `${baseUrl}/stream/${type}/${encodedId}.json`;
 
     const response = await fetchWithProxy(url, 0); // No delay for stream fetching
     const data = await safeJson<StremioStreamResponse>(response);

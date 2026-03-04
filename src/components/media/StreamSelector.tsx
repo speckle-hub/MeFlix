@@ -29,6 +29,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({
 
     useEffect(() => {
         const fetchAllStremioStreams = async () => {
+            console.log(`[STREAM SELECTOR] Initializing fetch for ${type}/${id}`);
             setLoading(true);
             setError(null);
             const allStremioStreams: StremioStream[] = [];
@@ -65,9 +66,9 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({
             const promises = enabledAddons.map(async (addon) => {
                 try {
                     const baseUrl = addon.url.replace('/manifest.json', '');
-                    // IMPORTANT: Stremio IDs (especially with colons like imdb:s:e or kitsu:id) should NOT be fully URI encoded 
-                    // when used as a path segment in the stream request.
+                    // We use the ID as provided, let the service handle encoding logic
                     const streamUrl = `${baseUrl}/stream/${type}/${id}.json`;
+                    console.log(`[STREAMS] Fetching from ${addon.name}:`, streamUrl);
 
                     const response = await fetch(`/api/proxy?url=${encodeURIComponent(streamUrl)}`);
 
