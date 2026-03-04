@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Play, Loader2, Info, AlertTriangle } from 'lucide-react';
 import { useAddonStore } from '@/store/addonStore';
 import { StremioStream } from '@/types/stremio';
+import { fetchStreams } from '@/lib/stremioService';
 import { Drawer } from 'vaul';
 
 interface StreamSelectorProps {
@@ -65,18 +66,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({
 
             const promises = enabledAddons.map(async (addon) => {
                 try {
-                    const baseUrl = addon.url.replace('/manifest.json', '');
-                    // We use the ID as provided, let the service handle encoding logic
-                    const streamUrl = `${baseUrl}/stream/${type}/${id}.json`;
-                    console.log(`[STREAMS] Fetching from ${addon.name}:`, streamUrl);
-
-                    const response = await fetch(`/api/proxy?url=${encodeURIComponent(streamUrl)}`);
-
-                    if (!response.ok) {
-                        return;
-                    }
-
-                    const data = await response.json();
+                    const data = await fetchStreams(addon.url, type, id);
 
                     if (data.streams && Array.isArray(data.streams)) {
                         console.log(`[STREAM] Found ${data.streams.length} streams via "${addon.name}"`);
