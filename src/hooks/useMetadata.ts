@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { fetchMetadata } from "@/lib/stremioService";
+import { fetchMetadata as fetchStremioMetadata } from "@/lib/stremioService";
+import { fetchMetadata as fetchCloudStreamMetadata } from "@/lib/cloudstreamService";
+import { fetchMetadata as fetchAniyomiMetadata } from "@/lib/aniyomiService";
 import { useAddonStore } from "@/store/addonStore";
 import { StremioMeta } from "@/types/stremio";
 
@@ -22,16 +24,40 @@ export function useMetadata(type: string, id: string, addonBaseUrl?: string) {
             if (addonBaseUrl) console.info('[useMetadata] Directed fetch targeting source:', addonBaseUrl);
             console.debug('[useMetadata] Total enabled addons:', enabledAddons.length);
 
-            // 1. Prioritize directed fetch if addonBaseUrl is provided
+            // 1. Check for Repository IDs (CloudStream / Aniyomi)
+            if (id.startsWith('cs-')) {
+                console.info('[useMetadata] Routing to CloudStream service for ID:', id);
+                const metadata = await fetchCloudStreamMetadata('default', id); // Logic to extract provider from ID in service
+                if (metadata) {
+                    setData(metadata as any);
+                    setLoading(false);
+                    console.groupEnd();
+                    return;
+                }
+            }
+
+            if (id.startsWith('ani-')) {
+                console.info('[useMetadata] Routing to Aniyomi service for ID:', id);
+                const metadata = await fetchAniyomiMetadata('default', id);
+                if (metadata) {
+                    setData(metadata as any);
+                    setLoading(false);
+                    console.groupEnd();
+                    return;
+                }
+            }
+
+            // 2. Prioritize directed fetch if addonBaseUrl is provided
             if (addonBaseUrl) {
+                const normalize = (u: string) => u.toLowerCase().replace(/\/+$/, '').replace('/manifest.json', '');
                 const targetAddon = enabledAddons.find(a =>
-                    a.url.toLowerCase().includes(addonBaseUrl.toLowerCase().replace('/manifest.json', ''))
+                    normalize(a.url) === normalize(addonBaseUrl)
                 );
 
                 if (targetAddon) {
                     console.debug(`[useMetadata] Found matching source addon: ${targetAddon.name}`);
                     try {
-                        const res = await fetchMetadata(targetAddon.url, type, id);
+                        const res = await fetchStremioMetadata(targetAddon.url, type, id);
                         if (res && res.meta) {
                             console.info(`[useMetadata] SUCCESS: Metadata resolved via source addon ${targetAddon.name}`);
                             setData(res.meta);
@@ -82,7 +108,7 @@ export function useMetadata(type: string, id: string, addonBaseUrl?: string) {
 
                 console.debug(`[useMetadata] Trying discovery via ${addon.name}...`);
                 try {
-                    const res = await fetchMetadata(addon.url, type, id);
+                    const res = await fetchStremioMetadata(addon.url, type, id);
                     if (res && res.meta) {
                         console.info(`[useMetadata] SUCCESS: Metadata resolved via discovery addon ${addon.name}`);
                         setData(res.meta);
@@ -107,7 +133,9 @@ export function useMetadata(type: string, id: string, addonBaseUrl?: string) {
     }, [addons, type, id, addonBaseUrl]);
 
     useEffect(() => {
-        fetchData();
+        let isMounted = true;
+        if (isMounted) fetchData();
+        return () => { isMounted = false; };
     }, [fetchData]);
 
     return { data, loading, error, refetch: fetchData };

@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 };
 
 import { AddonInitializer } from "@/components/ui/AddonInitializer";
+import { RepoInitializer } from "@/components/ui/RepoInitializer";
 
 export default function RootLayout({
   children,
@@ -45,6 +46,7 @@ export default function RootLayout({
           />
           <ShortcutManager />
           <AddonInitializer />
+          <RepoInitializer />
           <MainLayout>
             {children}
           </MainLayout>

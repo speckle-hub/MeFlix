@@ -64,6 +64,7 @@ export interface StremioStream {
     };
     addonBaseUrl?: string; // Track source for resumption
     addonId?: string;
+    isEmbed?: boolean;
 }
 
 export interface StremioCatalogResponse {

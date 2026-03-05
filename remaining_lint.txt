@@ -1,0 +1,406 @@
+C:\Users\my\MeFlix\src\app\anime\page.tsx
+  24:28  warning  'error' is assigned a value but never used                       @typescript-eslint/no-unused-vars
+  38:79  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\my\MeFlix\src\app\api\proxy-stream\route.ts
+  99:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\app\api\proxy\route.ts
+  32:13  error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  54:22  warning  'e' is defined but never used                                                                                        @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\app\lists\page.tsx
+   4:8    warning  'ContentGrid' is defined but never used                          @typescript-eslint/no-unused-vars
+  30:114  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  30:126  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+C:\Users\my\MeFlix\src\app\live\page.tsx
+    7:5   warning  'Filter' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   10:5   warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   11:5   warning  'Loader2' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  119:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  206:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\my\MeFlix\src\app\manga\[source]\[id]\page.tsx
+   7:10  warning  'Play' is defined but never used                          @typescript-eslint/no-unused-vars
+   7:22  warning  'Bookmark' is defined but never used                      @typescript-eslint/no-unused-vars
+   7:39  warning  'Calendar' is defined but never used                      @typescript-eslint/no-unused-vars
+   7:71  warning  'ChevronRight' is defined but never used                  @typescript-eslint/no-unused-vars
+   8:18  warning  'AnimatePresence' is defined but never used               @typescript-eslint/no-unused-vars
+  10:10  warning  'cn' is defined but never used                            @typescript-eslint/no-unused-vars
+  20:30  warning  'saveReadingProgress' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  40:22  warning  'err' is defined but never used                           @typescript-eslint/no-unused-vars
+  52:22  warning  'err' is defined but never used                           @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\app\manga\page.tsx
+   6:37   warning  'ShieldAlert' is defined but never used                          @typescript-eslint/no-unused-vars
+  11:10   warning  'ContentGridSkeleton' is defined but never used                  @typescript-eslint/no-unused-vars
+  83:149  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\my\MeFlix\src\app\manga\read\[source]\[id]\page.tsx
+    8:45  warning  'Loader2' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   96:8   warning  React Hook useEffect has missing dependencies: 'id', 'pages', 'saveReadingProgress', and 'source'. Either include them or remove the dependency array                                                                                                                                    react-hooks/exhaustive-deps
+  107:8   warning  React Hook useEffect has missing dependencies: 'next', 'prev', and 'router'. Either include them or remove the dependency array                                                                                                                                                          react-hooks/exhaustive-deps
+  190:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  210:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  246:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\my\MeFlix\src\app\meta\[type]\[id]\page.tsx
+    6:58  warning  'Loader2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   11:8   warning  'ContentGrid' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   66:21  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\my\MeFlix\src\app\meta\[type]\[id]\page.tsx:66:21
+  64 |
+  65 |                 if (storedId === pageId || parsed.id === id || parsed.id === pageId) {
+> 66 |                     setNsfwFallback(parsed);
+     |                     ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  67 |                     setSourceAddonBaseUrl(parsed.addonBaseUrl);
+  68 |                     console.info('[META] Applied directed fetch context for:', parsed.name);
+  69 |                 }  react-hooks/set-state-in-effect
+  201:41  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  240:75  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\app\movies\page.tsx
+  24:28  warning  'error' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\app\nsfw\page.tsx
+   13:61   warning  'Database' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   44:21   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @next/next/no-img-element
+  232:15   warning  'supportsMeta' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  233:17   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  409:9    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\my\MeFlix\src\app\nsfw\page.tsx:409:9
+  407 |     useEffect(() => {
+  408 |         const confirmed = localStorage.getItem("meflix-nsfw-age-confirmed") === "true";
+> 409 |         setAgeConfirmed(confirmed);
+      |         ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  410 |     }, []);
+  411 |
+  412 |     const handleAgeConfirm = () => {  react-hooks/set-state-in-effect
+  505:106  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  512:102  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\app\page.tsx
+  53:9  warning  'hasError' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\app\profile\page.tsx
+   10:5    warning  'User' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   13:5    warning  'Eye' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   14:5    warning  'EyeOff' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   28:10   warning  'motion' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   28:18   warning  'AnimatePresence' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   52:9    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\my\MeFlix\src\app\profile\page.tsx:52:9
+  50 |
+  51 |     useEffect(() => {
+> 52 |         setMounted(true);
+     |         ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  53 |     }, []);
+  54 |
+  55 |     if (!mounted) {  react-hooks/set-state-in-effect
+  160:107  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\app\settings\addons\page.tsx
+  5:17  warning  'Plus' is defined but never used          @typescript-eslint/no-unused-vars
+  5:23  warning  'Trash2' is defined but never used        @typescript-eslint/no-unused-vars
+  5:31  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+  5:45  warning  'XCircle' is defined but never used       @typescript-eslint/no-unused-vars
+  5:54  warning  'Loader2' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\app\settings\page.tsx
+    5:5   warning  'Settings' is defined but never used                             @typescript-eslint/no-unused-vars
+    6:19  warning  'ArrowLeft' is defined but never used                            @typescript-eslint/no-unused-vars
+  284:27  warning  'watchlist' is assigned a value but never used                   @typescript-eslint/no-unused-vars
+  315:70  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  315:88  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+C:\Users\my\MeFlix\src\app\tv\page.tsx
+  24:28  warning  'error' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\app\watchlist\page.tsx
+   9:5   warning  'Search' is defined but never used        @typescript-eslint/no-unused-vars
+   9:13  warning  'Filter' is defined but never used        @typescript-eslint/no-unused-vars
+  27:29  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\components\layout\BottomNav.tsx
+   7:18  warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+  10:18  warning  'FilmIcon' is defined but never used         @typescript-eslint/no-unused-vars
+  10:34  warning  'TvIcon' is defined but never used           @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\components\layout\MobileHeader.tsx
+  4:18  warning  'User' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\components\media\ChapterAccordion.tsx
+   4:37  warning  'BookOpen' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  14:15  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  53:26  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\my\MeFlix\src\components\media\ChapterAccordion.tsx:53:26
+  51 |
+  52 |     useEffect(() => {
+> 53 |         if (searchQuery) setExpandedGroup(0);
+     |                          ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  54 |     }, [searchQuery]);
+  55 |
+  56 |     if (chapters.length === 0) return null;  react-hooks/set-state-in-effect
+
+C:\Users\my\MeFlix\src\components\media\EpisodeAccordion.tsx
+   5:10  warning  'cn' is defined but never used                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+   9:11  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  16:45  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  16:53  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  24:31  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  45:59  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  65:58  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  66:55  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  74:61  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\my\MeFlix\src\components\media\SeasonSelector.tsx
+   4:10  warning  'ChevronDown' is defined but never used                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   6:18  warning  'AnimatePresence' is defined but never used                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+   9:11  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  21:45  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  21:53  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  29:31  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  35:50  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  85:59  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  93:49  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\my\MeFlix\src\components\media\StreamSelector.tsx
+    5:28  warning  'Info' is defined but never used          @typescript-eslint/no-unused-vars
+   54:64  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:79  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  114:41  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\components\ui\AddonInitializer.tsx
+  70:8  warning  React Hook useEffect has missing dependencies: 'installAddon' and 'removeAddon'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\my\MeFlix\src\components\ui\AddonManager.tsx
+  42:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\components\ui\BottomSheet.tsx
+  4:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\components\ui\ContentGrid.tsx
+   6:17  warning  'SearchX' is defined but never used                              @typescript-eslint/no-unused-vars
+  33:34  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\my\MeFlix\src\components\ui\Hero.tsx
+  12:14  error    Unexpected any. Specify a different type                                                                 @typescript-eslint/no-explicit-any
+  29:8   warning  React Hook useEffect has a missing dependency: 'next'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\my\MeFlix\src\components\ui\LiveNowRow.tsx
+   5:10  warning  'motion' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   9:10  warning  'cn' is defined but never used                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  66:44  warning  'index' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  72:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\my\MeFlix\src\components\ui\MangaSourceManager.tsx
+  6:43  warning  'Info' is defined but never used         @typescript-eslint/no-unused-vars
+  6:49  warning  'ShieldAlert' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\components\ui\MediaCard.tsx
+   4:35  warning  'MoreVertical' is defined but never used  @typescript-eslint/no-unused-vars
+  75:32  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\components\ui\PullToRefresh.tsx
+  124:10  warning  'cn' is defined but never used            @typescript-eslint/no-unused-vars
+  124:24  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\components\ui\RepoInitializer.tsx
+  49:8  warning  React Hook useEffect has missing dependencies: 'addRepository' and 'refreshRepositories'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\my\MeFlix\src\components\ui\SearchModal.tsx
+   14:10   warning  'cn' is defined but never used              @typescript-eslint/no-unused-vars
+   34:12   warning  'skips' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  106:81   error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  108:77   error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  134:44   error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  136:70   error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  145:52   error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  154:40   error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  390:88   error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  420:43   error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  424:55   error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  424:109  error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  424:172  error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\components\ui\SeasonSelector.tsx
+   6:10  warning  'StremioStream' is defined but never used                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  85:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\my\MeFlix\src\components\ui\ShortcutManager.tsx
+  5:10  warning  'HelpCircle' is defined but never used         @typescript-eslint/no-unused-vars
+  6:10  warning  'useWatchlistStore' is defined but never used  @typescript-eslint/no-unused-vars
+  7:10  warning  'toast' is defined but never used              @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\components\ui\VideoPlayer.tsx
+     6:41  warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+     7:30  warning  'Plus' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+     7:36  warning  'PartyPopper' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+    15:10  warning  'toast' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+    17:10  warning  'SeasonSelector' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   176:21  error    Error: Cannot access variable before it is declared
+
+`safePlay` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\my\MeFlix\src\components\ui\VideoPlayer.tsx:176:21
+  174 |                     video.muted = true;
+  175 |                     setIsMuted(true);
+> 176 |                     safePlay();
+      |                     ^^^^^^^^ `safePlay` accessed before it is declared
+  177 |                 });
+  178 |
+  179 |                 hls.on(Hls.Events.ERROR, async (event, data) => {
+
+C:\Users\my\MeFlix\src\components\ui\VideoPlayer.tsx:262:5
+  260 |     }, [url, isLive, isNSFW]);
+  261 |
+> 262 |     const safePlay = useCallback(async () => {
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 263 |         const video = videoRef.current;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 264 |         if (!video) return;
+      GÇª
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 283 |         }
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 284 |     }, []);
+      | ^^^^^^^^^^^^ `safePlay` is declared here
+  285 |
+  286 |     const togglePlay = useCallback(() => {
+  287 |         if (videoRef.current) {  react-hooks/immutability
+   260:8   warning  React Hook useEffect has missing dependencies: 'addonBaseUrl', 'addonId', and 'safePlay'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+   338:35  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   421:53  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   422:61  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   462:8   warning  React Hook useEffect has a missing dependency: 'handleFirstInteraction'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/exhaustive-deps
+   512:8   warning  React Hook useEffect has missing dependencies: 'handleFirstInteraction' and 'isLive'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              react-hooks/exhaustive-deps
+  1052:53  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @next/next/no-img-element
+  1124:10  warning  'formatTime' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\hooks\useCatalog.tsx
+  62:56  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  63:54  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  99:8   warning  React Hook useCallback has a missing dependency: 'extra'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\my\MeFlix\src\hooks\useDevice.ts
+  12:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\my\MeFlix\src\hooks\useDevice.ts:12:9
+  10 |
+  11 |     useEffect(() => {
+> 12 |         setIsMounted(true);
+     |         ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  13 |         const mobileQuery = window.matchMedia("(max-width: 767px)");
+  14 |         const tabletQuery = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
+  15 |         const desktopQuery = window.matchMedia("(min-width: 1024px)");  react-hooks/set-state-in-effect
+
+C:\Users\my\MeFlix\src\hooks\useHaptics.ts
+  10:22  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\hooks\useMediaQuery.ts
+  11:13  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\my\MeFlix\src\hooks\useMediaQuery.ts:11:13
+   9 |         const media = window.matchMedia(query);
+  10 |         if (media.matches !== matches) {
+> 11 |             setMatches(media.matches);
+     |             ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  12 |         }
+  13 |         const listener = () => setMatches(media.matches);
+  14 |         media.addEventListener("change", listener);  react-hooks/set-state-in-effect
+
+C:\Users\my\MeFlix\src\hooks\useMetadata.ts
+   32:41  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   43:41  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   83:67  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   93:51  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:26  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\lib\aniyomiService.ts
+   23:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   90:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  127:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  226:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  240:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  241:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\lib\cloudstreamService.ts
+   27:37  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  112:31  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  129:27  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  159:34  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:34  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  204:30  warning  'page' is defined but never used          @typescript-eslint/no-unused-vars
+  286:83  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  287:21  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  344:76  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\lib\mangaService.ts
+   69:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   70:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   81:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  102:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  112:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  140:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\lib\stremioService.ts
+  144:18  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  331:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  402:36  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  503:52  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\my\MeFlix\src\store\profileStore.ts
+  35:7   warning  'getRandomGradient' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  49:15  warning  'get' is defined but never used                         @typescript-eslint/no-unused-vars
+
+C:\Users\my\MeFlix\src\store\repoStore.ts
+  144:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  161:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+G£û 189 problems (91 errors, 98 warnings)
+

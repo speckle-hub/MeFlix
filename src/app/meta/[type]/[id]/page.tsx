@@ -239,6 +239,7 @@ export default function MetaPage({ params }: MetaPageProps) {
                                 episode={selectedEpisode || undefined}
                                 episodeTitle={activeMeta.videos?.find((v: any) => v.id === selectedEpisodeId)?.title}
                                 isNSFW={!!activeMeta.isNSFW}
+                                isEmbed={activeStream.isEmbed}
                                 addonBaseUrl={activeStream.addonBaseUrl}
                                 addonId={activeStream.addonId}
                                 onClose={() => setActiveStream(null)}

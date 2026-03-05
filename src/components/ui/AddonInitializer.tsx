@@ -67,7 +67,7 @@ export function AddonInitializer() {
         };
 
         init();
-    }, [isHydrated, installAddon, removeAddon]);
+    }, [isHydrated]); // Only depend on hydration status
 
     return null;
 }

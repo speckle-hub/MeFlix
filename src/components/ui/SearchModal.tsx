@@ -5,7 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, Command, Clock, ArrowRight, Film, Tv, PlaySquare, Loader2 } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { fetchSearch } from "@/lib/stremioService";
+import { searchContent as searchCloudStream } from "@/lib/cloudstreamService";
+import { searchContent as searchAniyomi } from "@/lib/aniyomiService";
 import { useAddonStore } from "@/store/addonStore";
+import { useRepoStore } from "@/store/repoStore";
 import { type Movie } from "@/lib/mockData";
 import { StremioCatalogResponse } from "@/types/stremio";
 import { cn } from "@/lib/utils";
@@ -32,6 +35,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     const [hasMore, setHasMore] = useState({ movie: true, series: true, anime: true });
     const [history, setHistory] = useState<string[]>([]);
     const { addons } = useAddonStore();
+    const { extensions } = useRepoStore();
     const inputRef = useRef<HTMLInputElement>(null);
     const observerTarget = useRef<HTMLDivElement>(null);
     const pathname = usePathname();
@@ -84,38 +88,44 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         }
 
         try {
+            // Use getState() for the most current values without subscribing to changes
+            const { addons: currentAddons } = useAddonStore.getState();
+            const { extensions: currentExtensions } = useRepoStore.getState();
+
             // Filter addons by BOTH enabled status AND NSFW safety matching current page
-            const filteredAddons = addons.filter(a => a.isEnabled && a.isNSFW === isNSFWPage);
+            const filteredAddons = currentAddons.filter(a => a.isEnabled && a.isNSFW === isNSFWPage);
             const types = ["movie", "series", "anime"];
 
-            // We need a stable reference for skips if we are loading more
-            // But we can just use the current value from the closure if we are careful,
-            // or better, pass the current skips in or use a ref.
-            // For now, let's use a functional update for state but we need the CURRENT skip to pass to the fetch function.
-            // I'll use a ref to track skips for fetching purposes to avoid the dependency loop.
-
-            const responses = await Promise.all(
-                filteredAddons.flatMap(addon =>
-                    types.map(type => {
-                        // Logic: if loading more, use current state. If not, 0.
-                        // To avoid dependency on state 'skips', let's just pass skips in as an argument if needed, 
-                        // or use a ref for 'currentSkipsVal'.
-                        return fetchSearch(addon.url, type, q, isNSFWPage, isLoadMore ? 20 : 0).catch((err) => {
-                            console.error(`[SEARCH] Addon ${addon.name} failed for ${type}:`, err);
-                            return { metas: [] };
-                        });
-                    })
+            // 1. Stremio Search
+            const stremioPromises = filteredAddons.flatMap(addon =>
+                types.map(type =>
+                    fetchSearch(addon.url, type, q, isNSFWPage, isLoadMore ? 20 : 0).catch(() => ({ metas: [] }))
                 )
             );
+
+            // 2. Repository Search (CloudStream & Aniyomi)
+            const enabledExtensions = currentExtensions.filter(e => e.isEnabled && e.isNSFW === isNSFWPage);
+            const extensionResultsPromises = enabledExtensions.map(ext => {
+                if (ext.type === 'cloudstream') {
+                    return searchCloudStream(ext.id, q).then(res => res.map((m: any) => ({ ...m, addonName: ext.name, sourceType: 'cloudstream' })));
+                } else {
+                    return searchAniyomi(ext.id, q).then(res => res.map((m: any) => ({ ...m, addonName: ext.name, sourceType: 'aniyomi' })));
+                }
+            });
+
+            const [stremioResponses, extensionResults] = await Promise.all([
+                Promise.all(stremioPromises),
+                Promise.all(extensionResultsPromises)
+            ]);
 
             const newMovies: Movie[] = [];
             const newSeries: Movie[] = [];
             const newAnime: Movie[] = [];
 
-            responses.forEach((res) => {
+            // Process Stremio
+            stremioResponses.forEach((res) => {
                 const catalogRes = res as StremioCatalogResponse;
-                if (!catalogRes.metas || catalogRes.metas.length === 0) return;
-
+                if (!catalogRes.metas) return;
                 catalogRes.metas.forEach((meta) => {
                     const item: Movie = {
                         id: meta.id,
@@ -129,11 +139,29 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                         quality: "HD",
                         isNSFW: meta.id.includes('nsfw') || (meta as any).isNSFW || false
                     };
-
                     if (item.type === "movie") newMovies.push(item);
                     else if (item.type === "series") newSeries.push(item);
                     else if (item.type === "anime") newAnime.push(item);
                 });
+            });
+
+            // Process Extensions
+            extensionResults.flat().forEach((meta: any) => {
+                const item: Movie = {
+                    id: meta.id,
+                    title: meta.title,
+                    description: meta.description || "",
+                    poster: meta.poster || "",
+                    backdrop: meta.backdrop || "",
+                    rating: meta.rating || "N/A",
+                    year: meta.year || "",
+                    type: meta.type as any,
+                    quality: "HD",
+                    isNSFW: isNSFWPage
+                };
+                if (item.type === "movie") newMovies.push(item);
+                else if (item.type === "series") newSeries.push(item);
+                else if (item.type === "anime") newAnime.push(item);
             });
 
             setResults(prev => {
@@ -182,7 +210,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [addons, isNSFWPage]);
+    }, [isNSFWPage]);
 
     // Infinite Scroll Observer
     useEffect(() => {
@@ -391,7 +419,17 @@ function ResultSection({ title, icon: Icon, results, onClose }: { title: string,
                         </div>
                         <div className="flex-1">
                             <h4 className="text-sm font-bold text-white group-hover:text-accent transition-colors">{item.title}</h4>
-                            <p className="text-xs text-text-muted">{item.year} • {item.rating} Rating</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <p className="text-xs text-text-muted">{item.year} • {item.rating} Rating</p>
+                                {(item as any).addonName && (
+                                    <>
+                                        <span className="text-[10px] text-white/20">•</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-accent/80 bg-accent/10 px-1.5 py-0.5 rounded-md border border-accent/20">
+                                            {(item as any).sourceType === 'cloudstream' ? 'Repo' : (item as any).sourceType === 'aniyomi' ? 'Anime' : 'Addon'} • {(item as any).addonName}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
                         </div>
                         <ArrowRight className="h-4 w-4 text-text-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                     </Link>

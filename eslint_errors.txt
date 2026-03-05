@@ -1,0 +1,20 @@
+﻿npx : Invalid project 
+directory provided, no 
+such directory: 
+C:\Users\my\MeFlix\lint
+At line:1 char:1
++ npx next lint 2>&1 | 
+Out-File -FilePath "c:\
+Users\my\MeFlix\eslint_
+er ...
++ ~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (Invalid proje   
+ ct...\my\MeFlix\li    
+nt:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 

@@ -5,7 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Play, Loader2, Info, AlertTriangle } from 'lucide-react';
 import { useAddonStore } from '@/store/addonStore';
 import { StremioStream } from '@/types/stremio';
-import { fetchStreams } from '@/lib/stremioService';
+import { fetchStreams as fetchStremioStreams } from '@/lib/stremioService';
+import { fetchStreams as fetchCloudStreamStreams } from '@/lib/cloudstreamService';
+import { fetchStreams as fetchAniyomiStreams } from '@/lib/aniyomiService';
 import { Drawer } from 'vaul';
 
 interface StreamSelectorProps {
@@ -35,58 +37,74 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({
             setError(null);
             const allStremioStreams: StremioStream[] = [];
 
-            // Fetch from enabled addons
-            let enabledAddons = addons.filter(a => a.isEnabled);
-
-            // Check if we have a specific source-addon context (NSFW directed fetch)
-            try {
-                const contextRaw = sessionStorage.getItem('content_context');
-                if (contextRaw) {
-                    const context = JSON.parse(contextRaw);
-                    if (context.addonBaseUrl) {
-                        const normalize = (u: string) => u.replace(/\/+$/, '').replace('/manifest.json', '').toLowerCase();
-                        const contextUrl = normalize(context.addonBaseUrl);
-                        const sourceAddon = enabledAddons.find(a => normalize(a.url) === contextUrl);
-
-                        if (sourceAddon) {
-                            console.log(`[STREAM] Directed fetch: prioritizing source addon "${sourceAddon.name}"`);
-                            enabledAddons = [sourceAddon];
-                        }
-                    }
-                }
-            } catch (err) {
-                console.warn('[STREAM] Failed to parse content context:', err);
-            }
-
-            if (enabledAddons.length === 0) {
-                setError("No addons enabled. Please install or enable an addon.");
-                setLoading(false);
-                return;
-            }
-
-            const promises = enabledAddons.map(async (addon) => {
+            // 1. Handle Repository IDs (CloudStream / Aniyomi)
+            if (id.startsWith('cs-') || id.startsWith('ani-')) {
+                console.info('[StreamSelector] Routing to repository service for ID:', id);
                 try {
-                    const data = await fetchStreams(addon.url, type, id);
+                    const repoStreams = id.startsWith('cs-')
+                        ? await fetchCloudStreamStreams('default', id)
+                        : await fetchAniyomiStreams('default', id);
 
-                    if (data.streams && Array.isArray(data.streams)) {
-                        console.log(`[STREAM] Found ${data.streams.length} streams via "${addon.name}"`);
-                        const streamsWithAddon = data.streams.map((s: any) => ({
+                    if (repoStreams && Array.isArray(repoStreams)) {
+                        const formatted = repoStreams.map(s => ({
                             ...s,
-                            addonName: addon.name,
-                            addonId: addon.id || addon.manifest?.id,
-                            addonBaseUrl: addon.url.replace('/manifest.json', ''),
-                            name: s.name || addon.name || "Unknown"
+                            addonName: id.startsWith('cs-') ? 'CloudStream' : 'Aniyomi',
+                            addonId: id.startsWith('cs-') ? 'cs-repo' : 'ani-repo'
                         }));
-                        allStremioStreams.push(...streamsWithAddon);
-                    } else {
-                        console.log(`[STREAM DEBUG] "${addon.name}" has no streams for this ID.`);
+                        allStremioStreams.push(...formatted as any);
                     }
                 } catch (e) {
-                    console.error(`[STREAM DEBUG] Error fetching from ${addon.name}:`, e);
+                    console.error('[StreamSelector] Repo fetch failed:', e);
                 }
-            });
+            } else {
+                // 2. Original Stremio Logic
+                // Fetch from enabled addons
+                let enabledAddons = addons.filter(a => a.isEnabled);
 
-            await Promise.allSettled(promises);
+                // Check if we have a specific source-addon context (NSFW directed fetch)
+                try {
+                    const contextRaw = sessionStorage.getItem('content_context');
+                    if (contextRaw) {
+                        const context = JSON.parse(contextRaw);
+                        if (context.addonBaseUrl) {
+                            const normalize = (u: string) => u.replace(/\/+$/, '').replace('/manifest.json', '').toLowerCase();
+                            const contextUrl = normalize(context.addonBaseUrl);
+                            const sourceAddon = enabledAddons.find(a => normalize(a.url) === contextUrl);
+
+                            if (sourceAddon) {
+                                console.log(`[STREAM] Directed fetch: prioritizing source addon "${sourceAddon.name}"`);
+                                enabledAddons = [sourceAddon];
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[STREAM] Failed to parse content context:', err);
+                }
+
+                if (enabledAddons.length > 0) {
+                    const promises = enabledAddons.map(async (addon) => {
+                        try {
+                            const data = await fetchStremioStreams(addon.url, type, id);
+
+                            if (data.streams && Array.isArray(data.streams)) {
+                                console.log(`[STREAM] Found ${data.streams.length} streams via "${addon.name}"`);
+                                const streamsWithAddon = data.streams.map((s: any) => ({
+                                    ...s,
+                                    addonName: addon.name,
+                                    addonId: addon.id || addon.manifest?.id,
+                                    addonBaseUrl: addon.url.replace('/manifest.json', ''),
+                                    name: s.name || addon.name || "Unknown"
+                                }));
+                                allStremioStreams.push(...streamsWithAddon);
+                            }
+                        } catch (e) {
+                            console.error(`[STREAM DEBUG] Error fetching from ${addon.name}:`, e);
+                        }
+                    });
+
+                    await Promise.allSettled(promises);
+                }
+            }
 
             if (allStremioStreams.length === 0) {
                 setError("No streams found. Try another movie or check your addons.");
@@ -108,7 +126,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({
         };
 
         fetchAllStremioStreams();
-    }, [type, id, addons]);
+    }, [type, id]); // Only re-fetch if type or id changes
 
     const renderStreamList = () => (
         <div className="space-y-2">

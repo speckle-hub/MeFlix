@@ -42,25 +42,39 @@ export async function GET(request: NextRequest) {
         }
 
         const responseText = await response.text();
+        const contentType = response.headers.get('content-type') || '';
+
         let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (e) {
-            console.error(`[Proxy API] Failed to parse JSON from ${url}. Response starts with: ${responseText.substring(0, 50)}`);
-            return NextResponse.json(
-                { error: 'Invalid JSON from upstream', details: 'Check if the addon is blocked by a firewall or returning HTML.' },
-                { status: 502 }
-            );
+        let isJson = false;
+
+        if (contentType.includes('application/json')) {
+            try {
+                data = JSON.parse(responseText);
+                isJson = true;
+            } catch (e) {
+                console.warn(`[Proxy API] Failed to parse JSON from ${url} despite content-type. Returning raw text.`);
+            }
         }
 
-        // Add permissive headers to the response
-        return NextResponse.json(data, {
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            }
-        });
+        if (isJson) {
+            return NextResponse.json(data, {
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                }
+            });
+        } else {
+            // Return raw text (HTML/XML/M3U8)
+            return new NextResponse(responseText, {
+                headers: {
+                    'Content-Type': contentType || 'text/plain',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                }
+            });
+        }
     } catch (error) {
         console.error(`[Proxy API] Fatal error for ${url}:`, error);
         return NextResponse.json(

@@ -31,6 +31,7 @@ interface VideoPlayerProps {
     episode?: number;
     episodeTitle?: string;
     isNSFW?: boolean;
+    isEmbed?: boolean;
     addonBaseUrl?: string;
     addonId?: string;
     onClose?: () => void;
@@ -38,7 +39,7 @@ interface VideoPlayerProps {
 
 export default function VideoPlayer({
     url, title, id, type, poster, isLive, channelLogo,
-    season, episode, episodeTitle, isNSFW,
+    season, episode, episodeTitle, isNSFW, isEmbed,
     addonBaseUrl, addonId,
     onClose
 }: VideoPlayerProps) {
@@ -539,21 +540,32 @@ export default function VideoPlayer({
                 onMouseLeave={() => setShowControls(false)}
                 style={{ cursor: showControls ? 'default' : 'none' }}
             >
-                <video
-                    ref={videoRef}
-                    className="h-full w-full"
-                    onClick={() => {
-                        handleFirstInteraction();
-                        togglePlay();
-                    }}
-                    onTimeUpdate={handleTimeUpdate}
-                    onLoadedMetadata={handleLoadedMetadata}
-                    onWaiting={() => setIsLoading(true)}
-                    onPlaying={() => setIsLoading(false)}
-                    muted={isMuted}
-                    playsInline
-                    style={{ filter: `brightness(${brightness}%)` }}
-                />
+                {isEmbed ? (
+                    <iframe
+                        src={url}
+                        className="h-full w-full border-0"
+                        allowFullScreen
+                        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                        onLoad={() => setIsLoading(false)}
+                        style={{ filter: `brightness(${brightness}%)` }}
+                    />
+                ) : (
+                    <video
+                        ref={videoRef}
+                        className="h-full w-full"
+                        onClick={() => {
+                            handleFirstInteraction();
+                            togglePlay();
+                        }}
+                        onTimeUpdate={handleTimeUpdate}
+                        onLoadedMetadata={handleLoadedMetadata}
+                        onWaiting={() => setIsLoading(true)}
+                        onPlaying={() => setIsLoading(false)}
+                        muted={isMuted}
+                        playsInline
+                        style={{ filter: `brightness(${brightness}%)` }}
+                    />
+                )}
 
                 {/* Gesture Overlay (Mobile Only) */}
                 <div

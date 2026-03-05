@@ -5,9 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useProfileStore } from "@/store/profileStore";
 import { useAddonStore } from "@/store/addonStore";
-import { fetchNSFWContent, NSFWContentItem } from "@/lib/stremioService";
+import { fetchNSFWContent as fetchStremioNSFW, NSFWContentItem } from "@/lib/stremioService";
+import { fetchNSFWContent as fetchCloudStreamNSFW, CloudStreamProvider } from "@/lib/cloudstreamService";
+import { fetchNSFWContent as fetchAniyomiNSFW, AniyomiExtension } from "@/lib/aniyomiService";
+import { useRepoStore } from "@/store/repoStore";
 import type { StremioManifest } from "@/types/stremio";
-import { ShieldAlert, Lock, Search, X, AlertTriangle, Play } from "lucide-react";
+import { ShieldAlert, Lock, Search, X, AlertTriangle, Play, Database } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -141,9 +144,13 @@ function NSFWLockedScreen() {
 // ─── Content Tab ─────────────────────────────────────────────────────────────
 function ContentTab({
     addons,
+    cloudStreamProviders = [],
+    aniyomiExtensions = [],
     emptyMessage,
 }: {
     addons: { url: string; name: string; manifest?: StremioManifest; isEnabled?: boolean }[];
+    cloudStreamProviders?: CloudStreamProvider[];
+    aniyomiExtensions?: AniyomiExtension[];
     emptyMessage: string;
 }) {
     const router = useRouter();
@@ -154,30 +161,61 @@ function ContentTab({
     const [error, setError] = useState(false);
 
     const load = useCallback(async () => {
-        if (addons.length === 0) {
+        if (addons.length === 0 && cloudStreamProviders.length === 0 && aniyomiExtensions.length === 0) {
             setLoading(false);
             return;
         }
         setLoading(true);
         setError(false);
         try {
-            const results = await fetchNSFWContent(addons);
-            // Diagnostic logging — helps confirm IDs and types from each addon
-            results.forEach(item => {
-                console.log('[NSFW] Card item:', {
+            const [stremioRes, cloudstreamRes, aniyomiRes] = await Promise.allSettled([
+                fetchStremioNSFW(addons),
+                fetchCloudStreamNSFW(cloudStreamProviders),
+                fetchAniyomiNSFW(aniyomiExtensions)
+            ]);
+
+            const allItems: NSFWContentItem[] = [];
+
+            if (stremioRes.status === 'fulfilled') {
+                allItems.push(...stremioRes.value);
+            }
+
+            if (cloudstreamRes.status === 'fulfilled') {
+                allItems.push(...cloudstreamRes.value.map(item => ({
                     id: item.id,
-                    name: item.name,
+                    name: item.title,
+                    poster: item.poster,
+                    description: item.description,
                     type: item.type,
+                    addonName: item.addonName,
+                    addonId: item.id,
                     addonBaseUrl: item.addonBaseUrl,
-                });
-            });
-            setItems(results);
-        } catch {
+                    sourceType: 'cloudstream'
+                })));
+            }
+
+            if (aniyomiRes.status === 'fulfilled') {
+                allItems.push(...aniyomiRes.value.map(item => ({
+                    id: item.id,
+                    name: item.title,
+                    poster: item.poster,
+                    description: item.description,
+                    type: item.type,
+                    addonName: item.addonName,
+                    addonId: item.id,
+                    addonBaseUrl: item.addonBaseUrl,
+                    sourceType: 'aniyomi'
+                })));
+            }
+
+            setItems(allItems);
+        } catch (err) {
+            console.error('[NSFW] Load error:', err);
             setError(true);
         } finally {
             setLoading(false);
         }
-    }, [addons]);
+    }, [addons, cloudStreamProviders, aniyomiExtensions]);
 
     useEffect(() => {
         load();
@@ -361,6 +399,7 @@ function ContentTab({
 export default function NSFWPage() {
     const { preferences } = useProfileStore();
     const { addons } = useAddonStore();
+    const { extensions } = useRepoStore();
     const [ageConfirmed, setAgeConfirmed] = useState<boolean | null>(null);
     const [activeTab, setActiveTab] = useState<"adult" | "hentai">("adult");
 
@@ -462,12 +501,16 @@ export default function NSFWPage() {
                         {activeTab === "adult" ? (
                             <ContentTab
                                 addons={adultAddons.map(a => ({ url: a.url, name: a.name, manifest: a.manifest, isEnabled: a.isEnabled }))}
-                                emptyMessage="No adult content addons installed or enabled."
+                                cloudStreamProviders={extensions
+                                    .filter(e => e.type === 'cloudstream' && e.isEnabled && e.isNSFW) as any}
+                                emptyMessage="No adult content addons or repositories installed or enabled."
                             />
                         ) : (
                             <ContentTab
                                 addons={hentaiAddons.map(a => ({ url: a.url, name: a.name, manifest: a.manifest, isEnabled: a.isEnabled }))}
-                                emptyMessage="No hentai content addons installed or enabled."
+                                aniyomiExtensions={extensions
+                                    .filter(e => e.type === 'aniyomi' && e.isEnabled && e.isNSFW) as any}
+                                emptyMessage="No hentai content addons or repositories installed or enabled."
                             />
                         )}
                     </motion.div>

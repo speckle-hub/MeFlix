@@ -131,7 +131,7 @@ async function fetchWithProxy(url: string, delayMs: number = 1000): Promise<Resp
     }
 
     const errors: string[] = [];
-    let headers: Record<string, string> = {
+    const headers: Record<string, string> = {
         'Accept': 'application/json',
     };
 
@@ -529,7 +529,7 @@ export async function fetchLiveContent(liveAddons: any[]): Promise<LiveContentIt
 
                     const normalizedItems = data.metas.map((meta: StremioMeta) => {
                         // Extract category from meta genres or catalog name
-                        let rawCategory = meta.genres?.[0] || catalog.name || 'Other';
+                        const rawCategory = meta.genres?.[0] || catalog.name || 'Other';
                         const category = CATEGORY_MAP[rawCategory] || CATEGORY_MAP[rawCategory.toLowerCase()] || rawCategory;
 
                         return {

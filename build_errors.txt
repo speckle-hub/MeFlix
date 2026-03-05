@@ -1,0 +1,41 @@
+﻿
+> meflix@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 3.3s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/16) ...
+  Generating static pages using 11 workers (4/16) 
+  Generating static pages using 11 workers (8/16) 
+  Generating static pages using 11 workers (12/16) 
+Γ£ô Generating static pages using 11 workers (16/16) in 460.1ms
+  Finalizing page optimization ...
+
+Route (app)
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ Γùï /anime
+Γö£ ╞Æ /api/proxy
+Γö£ ╞Æ /api/proxy-stream
+Γö£ Γùï /lists
+Γö£ Γùï /live
+Γö£ Γùï /manga
+Γö£ ╞Æ /manga/[source]/[id]
+Γö£ ╞Æ /manga/read/[source]/[id]
+Γö£ ╞Æ /meta/[type]/[id]
+Γö£ Γùï /movies
+Γö£ Γùï /nsfw
+Γö£ Γùï /profile
+Γö£ Γùï /settings
+Γö£ Γùï /settings/addons
+Γö£ Γùï /tv
+Γöö Γùï /watchlist
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+
