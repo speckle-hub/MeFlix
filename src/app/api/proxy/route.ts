@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
                 'Referer': new URL(url).origin + '/'
             },
             cache: 'no-store',
-            // @ts-ignore - timeout is supported in some node versions/fetch polyfills
             next: { revalidate: 0 }
         });
 
@@ -51,7 +50,7 @@ export async function GET(request: NextRequest) {
             try {
                 data = JSON.parse(responseText);
                 isJson = true;
-            } catch (e) {
+            } catch {
                 console.warn(`[Proxy API] Failed to parse JSON from ${url} despite content-type. Returning raw text.`);
             }
         }

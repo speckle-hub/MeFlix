@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-    Settings, SkipBack, SkipForward, X, ChevronRight,
-    Monitor, Loader2, Check, Plus, PartyPopper
+    Settings, SkipBack, SkipForward, X,
+    Monitor, Loader2, Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -12,9 +12,7 @@ import { useProgressStore } from "@/store/progressStore";
 import { useWatchlistStore } from "@/store/watchlistStore";
 import { useProfileStore } from "@/store/profileStore";
 import { useHaptics } from "@/hooks/useHaptics";
-import { toast } from "sonner";
 import Hls from 'hls.js';
-import { SeasonSelector } from "./SeasonSelector";
 import { useSettingsStore } from "@/store/settingsStore";
 import { Drawer } from "vaul";
 import { Sun, Volume2 as VolIcon, FastForward, Rewind } from "lucide-react";
@@ -43,10 +41,7 @@ export default function VideoPlayer({
     addonBaseUrl, addonId,
     onClose
 }: VideoPlayerProps) {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const hlsRef = useRef<Hls | null>(null);
     const retryCountRef = useRef(0);
-    const playPromiseRef = useRef<Promise<void> | null>(null);
     const MAX_RETRIES = 5;
 
     const { saveProgress, getProgress, removeFromContinueWatching } = useProgressStore();
@@ -87,6 +82,31 @@ export default function VideoPlayer({
     });
 
     const controlsTimeoutRef = useRef<NodeJS.Timeout>(null);
+    const hlsRef = useRef<Hls | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const playPromiseRef = useRef<Promise<void> | null>(null);
+
+    const safePlay = useCallback(async () => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        try {
+            playPromiseRef.current = video.play();
+            if (playPromiseRef.current !== undefined) {
+                await playPromiseRef.current;
+                setIsPlaying(true);
+                playPromiseRef.current = null;
+            }
+        } catch (err) {
+            if (err instanceof Error && err.name === 'AbortError') {
+                console.debug('[VideoPlayer] Play interrupted by new load request.');
+            } else {
+                console.warn('[VideoPlayer] Play failed:', err);
+            }
+            setIsPlaying(false);
+            playPromiseRef.current = null;
+        }
+    }, []);
 
     // HLS Initialization & Management
     useEffect(() => {
@@ -169,11 +189,13 @@ export default function VideoPlayer({
                 video.setAttribute('referrerpolicy', 'no-referrer');
 
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    setIsLoading(false);
-                    // Start muted for autoplay compliance
-                    video.muted = true;
-                    setIsMuted(true);
-                    safePlay();
+                    setTimeout(() => {
+                        setIsLoading(false);
+                        // Start muted for autoplay compliance
+                        video.muted = true;
+                        setIsMuted(true);
+                        safePlay();
+                    }, 0);
                 });
 
                 hls.on(Hls.Events.ERROR, async (event, data) => {
@@ -240,15 +262,13 @@ export default function VideoPlayer({
                 // Safari native HLS support
                 video.src = finalUrl;
                 video.muted = true;
-                setIsMuted(true);
-                safePlay();
+                setTimeout(() => safePlay(), 0);
             }
         } else {
             // Direct MP4/other format
             video.src = finalUrl;
             video.muted = true;
-            setIsMuted(true);
-            safePlay();
+            setTimeout(() => safePlay(), 0);
         }
 
         return () => {
@@ -257,31 +277,8 @@ export default function VideoPlayer({
                 hlsRef.current = null;
             }
         };
-    }, [url, isLive, isNSFW]);
+    }, [url, isLive, isNSFW, safePlay, addonId, addonBaseUrl]);
 
-    const safePlay = useCallback(async () => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        // If a play is already in progress, don't start another one
-        // and avoid interrupting the current promise.
-        try {
-            playPromiseRef.current = video.play();
-            if (playPromiseRef.current !== undefined) {
-                await playPromiseRef.current;
-                setIsPlaying(true);
-                playPromiseRef.current = null;
-            }
-        } catch (err) {
-            if (err instanceof Error && err.name === 'AbortError') {
-                console.debug('[VideoPlayer] Play interrupted by new load request (expected during channel switch).');
-            } else {
-                console.warn('[VideoPlayer] Play failed:', err);
-            }
-            setIsPlaying(false);
-            playPromiseRef.current = null;
-        }
-    }, []);
 
     const togglePlay = useCallback(() => {
         if (videoRef.current) {
@@ -459,7 +456,7 @@ export default function VideoPlayer({
             document.removeEventListener('click', globalHandler);
             document.removeEventListener('touchstart', globalHandler);
         };
-    }, []);
+    }, [handleFirstInteraction]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -509,7 +506,7 @@ export default function VideoPlayer({
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [togglePlay, id, title, poster, type, hapticSuccess, light, isInWatchlist, addToWatchlist, removeFromWatchlist, removeFromContinueWatching, needsUserInteraction, isMuted]);
+    }, [togglePlay, id, title, poster, type, hapticSuccess, light, isInWatchlist, addToWatchlist, removeFromWatchlist, removeFromContinueWatching, needsUserInteraction, isMuted, handleFirstInteraction]);
 
     useEffect(() => {
         if (videoRef.current) {
@@ -1118,14 +1115,6 @@ export default function VideoPlayer({
             </Drawer.Root>
         </>
     );
-}
-
-// Helper to format time
-function formatTime(seconds: number): string {
-    if (!seconds || isNaN(seconds)) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
 }
 
 // ─── Settings Panel (shared between Desktop dropdown & Mobile sheet) ──────────

@@ -165,8 +165,10 @@ function ContentTab({
             setLoading(false);
             return;
         }
-        setLoading(true);
-        setError(false);
+        setTimeout(() => {
+            setLoading(true);
+            setError(false);
+        }, 0);
         try {
             const [stremioRes, cloudstreamRes, aniyomiRes] = await Promise.allSettled([
                 fetchStremioNSFW(addons),
@@ -184,14 +186,14 @@ function ContentTab({
                 allItems.push(...cloudstreamRes.value.map(item => ({
                     id: item.id,
                     name: item.title,
-                    poster: item.poster,
-                    description: item.description,
+                    poster: item.poster || '',
+                    description: item.description || '',
                     type: item.type,
-                    addonName: item.addonName,
+                    addonName: item.addonName || '',
                     addonId: item.id,
-                    addonBaseUrl: item.addonBaseUrl,
+                    addonBaseUrl: item.addonBaseUrl || '',
                     sourceType: 'cloudstream'
-                })));
+                } as NSFWContentItem)));
             }
 
             if (aniyomiRes.status === 'fulfilled') {
@@ -406,7 +408,7 @@ export default function NSFWPage() {
     // Check localStorage for prior age confirmation (client-side only)
     useEffect(() => {
         const confirmed = localStorage.getItem("meflix-nsfw-age-confirmed") === "true";
-        setAgeConfirmed(confirmed);
+        setTimeout(() => setAgeConfirmed(confirmed), 0);
     }, []);
 
     const handleAgeConfirm = () => {

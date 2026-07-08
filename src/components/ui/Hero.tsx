@@ -26,7 +26,7 @@ export default function Hero({ movies, loading }: HeroProps) {
         if (displayMovies.length <= 1) return;
         const timer = setInterval(next, 8000);
         return () => clearInterval(timer);
-    }, [displayMovies.length]);
+    }, [displayMovies.length, next]);
 
     if (loading) {
         return (

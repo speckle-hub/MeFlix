@@ -3,12 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useMangaStore } from "@/store/mangaStore";
 import { searchMangaDex, fetchMangaDexLatest, MangaSearchResult } from "@/lib/mangaService";
-import { BookOpen, Search, Loader2, ShieldAlert, Filter, ChevronRight, LayoutGrid } from "lucide-react";
+import { BookOpen, Search, Loader2, Filter, ChevronRight, LayoutGrid } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ContentGridSkeleton } from "@/components/ui/Skeleton";
+// import { ContentGridSkeleton } from "@/components/ui/Skeleton";
 
 export default function MangaPage() {
     const { installedSources } = useMangaStore();

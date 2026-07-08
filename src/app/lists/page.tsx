@@ -1,7 +1,6 @@
 "use client";
 
 import { Bookmark } from "lucide-react";
-import ContentGrid from "@/components/ui/ContentGrid";
 
 export default function ListsPage() {
     return (
@@ -27,7 +26,7 @@ export default function ListsPage() {
                 </div>
                 <div className="space-y-2">
                     <h3 className="text-xl font-bold text-white">No lists yet</h3>
-                    <p className="text-sm text-text-muted max-w-xs mx-auto">Start creating lists by clicking the "Add to List" button on any movie or series.</p>
+                    <p className="text-sm text-text-muted max-w-xs mx-auto">Start creating lists by clicking the &quot;Add to List&quot; button on any movie or series.</p>
                 </div>
             </div>
         </div>

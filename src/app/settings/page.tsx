@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import {
-    Settings, Play, Palette, Shield, Info,
-    ChevronRight, ArrowLeft, Globe, Monitor,
+    Play, Palette, Shield, Info,
+    ChevronRight, Globe, Monitor,
     Check, Trash2, RefreshCcw, Plus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -281,7 +281,7 @@ function AddonSettings() {
 }
 
 function PrivacySettings({ resetAll }: { resetAll: () => void }) {
-    const { clearHistory, watchlist } = useWatchlistStore();
+    const { clearHistory } = useWatchlistStore();
     const { clearAllProgress } = useProgressStore();
 
     const handleReset = () => {
@@ -312,7 +312,7 @@ function PrivacySettings({ resetAll }: { resetAll: () => void }) {
                 >
                     <div>
                         <h4 className="font-bold text-white">Clear Playback Progress</h4>
-                        <p className="text-xs text-text-muted">Reset "Continue Watching" for all items.</p>
+                        <p className="text-xs text-text-muted">                        Reset Continue Watching for all items.</p>
                     </div>
                     <RefreshCcw className="h-4 w-4 text-text-muted" />
                 </button>

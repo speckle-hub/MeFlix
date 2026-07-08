@@ -50,7 +50,7 @@ function HomeContent() {
     (seriesLoading && !trendingSeries.length) ||
     (animeLoading && !animeList.length);
 
-  const hasError = moviesError && seriesError && animeError;
+
 
   return (
     <div className="flex flex-col min-h-screen">

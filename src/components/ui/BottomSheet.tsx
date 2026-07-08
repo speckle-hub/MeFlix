@@ -1,7 +1,6 @@
 "use client";
 
 import { Drawer } from "vaul";
-import { cn } from "@/lib/utils";
 
 interface BottomSheetProps {
     trigger?: React.ReactNode;

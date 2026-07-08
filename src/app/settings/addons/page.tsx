@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAddonStore } from "@/store/addonStore";
-import { Globe, Plus, Trash2, CheckCircle2, XCircle, Loader2, Info, ChevronRight } from "lucide-react";
+import { Globe, Info, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";

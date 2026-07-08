@@ -1,3 +1,18 @@
+import { useRepoStore, type RepoExtension } from "@/store/repoStore";
+
+export type CloudStreamType = 'movie' | 'series' | 'anime' | 'nsfw' | 'manga' | 'tv-show';
+
+export interface CloudStreamItem {
+    id: string;
+    title: string;
+    poster: string;
+    type: CloudStreamType;
+    rating?: string;
+    year?: string;
+    backdrop?: string;
+    description?: string;
+}
+
 export interface CloudStreamProvider {
     name: string;
     internalName: string;
@@ -6,6 +21,17 @@ export interface CloudStreamProvider {
     url: string;
     language?: string;
     tvTypes: string[];
+    repositoryUrl?: string;
+}
+
+export interface PluginData {
+    name: string;
+    internalName?: string;
+    description?: string;
+    iconUrl?: string;
+    url: string;
+    language?: string;
+    tvTypes?: string[];
     repositoryUrl?: string;
 }
 
@@ -24,7 +50,7 @@ export async function fetchRepoIndex(repoUrl: string): Promise<CloudStreamProvid
                 if (!listRes.ok) continue;
                 const plugins = await listRes.json();
 
-                plugins.forEach((p: any) => {
+                plugins.forEach((p: PluginData) => {
                     allProviders.push({
                         name: p.name,
                         internalName: p.internalName || p.name,
@@ -51,7 +77,7 @@ export async function fetchRepoIndex(repoUrl: string): Promise<CloudStreamProvid
 /**
  * Maps common CloudStream providers to their web-scrapable counterparts or API relays.
  */
-export async function fetchProviderCatalog(providerId: string, type: string, page: number = 1) {
+export async function fetchProviderCatalog(providerId: string, type: CloudStreamType, page: number = 1): Promise<CloudStreamItem[]> {
     console.log(`[CloudStream] Fetching catalog for ${providerId} (${type}, page ${page})`);
 
     const providerName = providerId.split('-').pop() || '';
@@ -82,7 +108,7 @@ export async function fetchProviderCatalog(providerId: string, type: string, pag
     }
 }
 
-async function scrapeSflix(page: number, type: string) {
+async function scrapeSflix(page: number, type: CloudStreamType): Promise<CloudStreamItem[]> {
     const baseUrl = 'https://sflix.to';
     const url = `${baseUrl}/${type === 'movie' ? 'movie' : 'tv-show'}?page=${page}`;
 
@@ -106,34 +132,34 @@ async function scrapeSflix(page: number, type: string) {
 
             return {
                 id: `cs-sflix-${sflixId}`,
-                realSlug: href.split('/').pop(), // e.g. "movie-name-123"
+                realSlug: href.split('/').pop() || "",
                 title: titleEl?.textContent?.trim() || 'Unknown',
                 poster: posterEl?.src || posterEl?.getAttribute('data-src') || '',
-                type: type as any,
+                type: type,
                 rating: 'N/A',
                 year: infoEls[0]?.textContent?.trim() || ''
             };
         });
     } catch (e) {
-        console.error("Sflix scraping failed:", e);
+        console.warn("Sflix scraping failed:", e);
         return [];
     }
 }
 
-function getMockCatalog(provider: string, type: string) {
+function getMockCatalog(provider: string, type: CloudStreamType): CloudStreamItem[] {
     return [
         {
             id: `cs-${provider}-1`,
             title: `${provider} Content 1`,
             poster: 'https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg',
-            type: type as any,
+            type: type,
             rating: '7.5',
             year: '2024'
         }
     ];
 }
 
-async function scrapeCornHub(page: number) {
+async function scrapeCornHub(page: number): Promise<CloudStreamItem[]> {
     const baseUrl = 'https://cornhub.website';
     const url = `${baseUrl}/videos?page=${page}`;
 
@@ -156,18 +182,18 @@ async function scrapeCornHub(page: number) {
                 id: `cs-cornhub-${id}`,
                 title: titleEl?.textContent?.trim() || 'Unknown',
                 poster: posterEl?.src || '',
-                type: 'movie' as any,
+                type: 'movie' as CloudStreamType,
                 rating: 'N/A',
                 year: '2024'
             };
         });
     } catch (e) {
-        console.error("CornHub scraping failed:", e);
+        console.warn("CornHub scraping failed:", e);
         return [];
     }
 }
 
-async function scrape18EU(page: number) {
+async function scrape18EU(page: number): Promise<CloudStreamItem[]> {
     const baseUrl = 'https://18eu.net';
     const url = `${baseUrl}/movies/page/${page}/`;
 
@@ -190,19 +216,20 @@ async function scrape18EU(page: number) {
                 id: `cs-18eu-${id}`,
                 title: titleEl?.textContent?.trim() || 'Unknown',
                 poster: posterEl?.src || '',
-                type: 'movie' as any,
+                type: 'movie' as CloudStreamType,
                 rating: 'N/A',
                 year: '2024'
             };
         });
     } catch (e) {
-        console.error("18EU scraping failed:", e);
+        console.warn("18EU scraping failed:", e);
         return [];
     }
 }
 
-async function scrapeAllWish(page: number) {
+async function scrapeAllWish(page: number): Promise<CloudStreamItem[]> {
     // Implementation for AllWish...
+    console.log(`[CloudStream] AllWish scraping for page ${page} not yet implemented.`);
     return [];
 }
 
@@ -283,20 +310,25 @@ export async function fetchStreams(providerId: string, id: string) {
     ];
 }
 
-export async function fetchNSFWContent(providers: CloudStreamProvider[]): Promise<any[]> {
-    const allItems: any[] = [];
+interface AugmentedCloudStreamItem extends CloudStreamItem {
+    addonName?: string;
+    addonBaseUrl?: string;
+    sourceType?: 'cloudstream';
+}
 
-    const fetchPromises = providers.map(async (provider) => {
+export async function fetchNSFWContent(providers?: any[]): Promise<AugmentedCloudStreamItem[]> {
+    const { extensions } = useRepoStore.getState();
+    const nsfwProviders = providers || extensions.filter((ext: RepoExtension) => ext.isEnabled && ext.isNSFW && ext.type === 'cloudstream');
+    const allItems: CloudStreamItem[] = [];
+
+    const fetchPromises = nsfwProviders.map(async (provider: RepoExtension) => {
         try {
-            // High-level catalogs for CloudStream usually map to 'Trending' or 'New'
-            // For this implementation, we'll fetch its generic catalog
-            const catalog = await fetchProviderCatalog(`${provider.repositoryUrl}-${provider.internalName}`, 'nsfw');
-
+            const catalog = await fetchProviderCatalog(provider.id, 'movie');
             return catalog.map(item => ({
                 ...item,
                 addonName: provider.name,
-                addonBaseUrl: provider.url,
-                sourceType: 'cloudstream'
+                addonBaseUrl: provider.baseUrl,
+                sourceType: 'cloudstream' as const
             }));
         } catch (err) {
             console.warn(`[CloudStream NSFW] Failed for ${provider.name}:`, err);
@@ -305,16 +337,16 @@ export async function fetchNSFWContent(providers: CloudStreamProvider[]): Promis
     });
 
     const results = await Promise.allSettled(fetchPromises);
-    results.forEach(res => {
+    results.forEach((res) => {
         if (res.status === 'fulfilled') {
-            allItems.push(...res.value);
+            allItems.push(...(res.value as AugmentedCloudStreamItem[]));
         }
     });
 
     return allItems;
 }
 
-export async function searchContent(providerId: string, query: string) {
+export async function searchContent(providerId: string, query: string): Promise<CloudStreamItem[]> {
     console.log(`[CloudStream] Searching for "${query}" via ${providerId}`);
     const providerName = providerId.split('-').pop() || '';
 
@@ -341,13 +373,13 @@ export async function searchContent(providerId: string, query: string) {
                     id: `cs-sflix-${sflixId}`,
                     title: titleEl?.textContent?.trim() || 'Unknown',
                     poster: posterEl?.src || posterEl?.getAttribute('data-src') || '',
-                    type: href.includes('/movie/') ? 'movie' : 'series' as any,
+                    type: (href.includes('/movie/') ? 'movie' : 'series') as CloudStreamType,
                     rating: 'N/A',
                     year: infoEls[0]?.textContent?.trim() || ''
                 };
             });
         } catch (e) {
-            console.error("Sflix search failed:", e);
+            console.warn("Sflix search failed:", e);
             return [];
         }
     }

@@ -21,7 +21,7 @@ export default function AnimePage() {
 }
 
 function AnimeContent() {
-    const { data, loading, error } = useCatalog("anime", "kitsu-anime-trending");
+    const { data, loading } = useCatalog("anime", "kitsu-anime-trending");
 
     return (
         <div className="space-y-10 animate-fade-in pb-20">
@@ -35,7 +35,7 @@ function AnimeContent() {
                     </div>
                     <h1 className="text-4xl font-black text-white lg:text-6xl">Anime</h1>
                     <p className="max-w-xl text-lg text-text-muted">
-                        Explore stunning worlds and epic adventures from Japan's finest studios.
+                        Explore stunning worlds and epic adventures from Japan&apos;s finest studios.
                     </p>
                 </div>
             </div>

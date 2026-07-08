@@ -46,7 +46,7 @@ export function RepoInitializer() {
         };
 
         init();
-    }, [isHydrated]);
+    }, [isHydrated, addRepository, refreshRepositories]);
 
     return null;
 }

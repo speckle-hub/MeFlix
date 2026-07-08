@@ -77,7 +77,7 @@ export default function MangaReaderPage({ params }: MangaReaderProps) {
             }
         };
         loadPages();
-    }, [id]);
+    }, [id, source, saveReadingProgress]);
 
     // ── Progress Tracking ────────────────────────────────────────────────────
     useEffect(() => {
@@ -93,6 +93,13 @@ export default function MangaReaderPage({ params }: MangaReaderProps) {
                 poster: pages[0] || ""
             });
         }
+    }, [currentPage, pages.length, id, source, saveReadingProgress]);
+
+    const next = useCallback(() => {
+        if (currentPage < pages.length - 1) setCurrentPage(p => p + 1);
+    }, [currentPage, pages.length]);
+    const prev = useCallback(() => {
+        if (currentPage > 0) setCurrentPage(p => p - 1);
     }, [currentPage, pages.length]);
 
     // ── Keyboard Navigation ──────────────────────────────────────────────────
@@ -104,14 +111,7 @@ export default function MangaReaderPage({ params }: MangaReaderProps) {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [currentPage, pages.length]);
-
-    const next = () => {
-        if (currentPage < pages.length - 1) setCurrentPage(p => p + 1);
-    };
-    const prev = () => {
-        if (currentPage > 0) setCurrentPage(p => p - 1);
-    };
+    }, [next, prev, router]);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {

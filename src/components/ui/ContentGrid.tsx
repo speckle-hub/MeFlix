@@ -3,7 +3,7 @@
 import { type Movie } from "@/lib/mockData";
 import MediaCard from "./MediaCard";
 import { ContentGridSkeleton } from "./Skeleton";
-import { Ghost, SearchX, Clapperboard } from "lucide-react";
+import { Ghost, Clapperboard } from "lucide-react";
 
 interface ContentGridProps {
     title: string;
@@ -30,7 +30,7 @@ export default function ContentGrid({ title, movies, loading }: ContentGridProps
                 <div className="space-y-2">
                     <h3 className="text-xl font-bold text-white">Nothing found in {title}</h3>
                     <p className="max-w-xs text-sm text-text-muted">
-                        We couldn't find any content for this category. Try adjusting your filters or adding more addons.
+                        We couldn&apos;t find any content for this category. Try adjusting your filters or adding more addons.
                     </p>
                 </div>
             </div>
