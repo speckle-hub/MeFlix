@@ -9,6 +9,7 @@ export interface Movie {
     quality: string;
     type: 'movie' | 'series' | 'anime' | 'manga';
     isNSFW: boolean;
+    sourceName?: string;
 }
 
 export const MOCK_MOVIES: Movie[] = [

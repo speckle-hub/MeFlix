@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useAddonStore, DEFAULT_ADDONS, DEFAULT_LIVE_ADDONS, DEFAULT_NSFW_ADULT_ADDONS, DEFAULT_NSFW_HENTAI_ADDONS } from "@/store/addonStore";
 
-const ADDON_INIT_VERSION = 10; // Version 10: Hydration-aware & strict Torrentio ban
+const ADDON_INIT_VERSION = 11; // Version 11: Added TPB 4K Porn & Adult Stremio Addon; force category re-install
 
 export function AddonInitializer() {
     const installAddon = useAddonStore(state => state.installAddon);

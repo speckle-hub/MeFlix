@@ -121,9 +121,12 @@ export const DEFAULT_NSFW_ADULT_ADDONS = [
         name: "xxxClub"
     },
     {
-        // NOTE: offline as of 2026-02-22 (DNS not resolving)
-        url: "https://xxxclub-stremio.nondikass.com/manifest.json",
-        name: "XXXClub (alt)"
+        url: "https://tpb-adult-addon.click/manifest.json",
+        name: "TPB 4K Porn"
+    },
+    {
+        url: "https://asa.00696900.xyz/manifest.json",
+        name: "Adult Stremio Addon"
     },
 ];
 
@@ -153,11 +156,7 @@ export const useAddonStore = create<AddonState>()(
             setDemoMode: (isDemoMode) => set({ isDemoMode }),
             setHydrated: (isHydrated) => set({ isHydrated }),
             installAddon: async (url, isNSFW = false, category?: AddonCategory) => {
-                // If no URL provided, install defaults
-                if (!url) {
-                    // Logic moved to AddonInitializer for better control
-                    return true;
-                }
+                if (!url) return true;
                 try {
                     const { fetchAddonManifest } = await import("@/lib/stremioService");
                     const manifest = await fetchAddonManifest(url);
@@ -167,18 +166,6 @@ export const useAddonStore = create<AddonState>()(
                     }
 
                     const existing = get().addons.find(a => a.url === url);
-                    if (existing) {
-                        // If it exists but has the wrong category, update it
-                        if (category && existing.category !== category) {
-                            set((state) => ({
-                                addons: state.addons.map(a =>
-                                    a.url === url ? { ...a, category } : a
-                                )
-                            }));
-                        }
-                        return true;
-                    }
-
                     const isLiveAddon = DEFAULT_LIVE_ADDONS.some(a => a.url === url);
                     const isNsfwAdult = DEFAULT_NSFW_ADULT_ADDONS.some(a => a.url === url);
                     const isNsfwHentai = DEFAULT_NSFW_HENTAI_ADDONS.some(a => a.url === url);
@@ -187,6 +174,26 @@ export const useAddonStore = create<AddonState>()(
                         (isLiveAddon ? 'live' :
                             isNsfwAdult ? 'nsfw-adult' :
                                 isNsfwHentai ? 'nsfw-hentai' : 'regular');
+
+                    if (existing) {
+                        const needsUpdate = (!existing.category || existing.category !== resolvedCategory || existing.name !== manifest.name);
+                        if (needsUpdate) {
+                            set((state) => ({
+                                addons: state.addons.map(a =>
+                                    a.url === url ? {
+                                        ...a,
+                                        category: resolvedCategory,
+                                        name: manifest.name,
+                                        icon: manifest.logo || a.icon,
+                                        manifest: manifest,
+                                        isNSFW: isNsfwAdult || isNsfwHentai || isNSFW,
+                                    } : a
+                                )
+                            }));
+                            clearCatalogCache();
+                        }
+                        return true;
+                    }
 
                     set((state) => ({
                         addons: [...state.addons, {

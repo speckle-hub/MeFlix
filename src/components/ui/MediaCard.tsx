@@ -188,6 +188,14 @@ export default function MediaCard({ movie, index }: MediaCardProps) {
                         <span>{movie.year}</span>
                         <span className="h-1 w-1 rounded-full bg-text-muted/30" />
                         <span className="capitalize">{movie.type}</span>
+                        {movie.sourceName && (
+                            <>
+                                <span className="h-1 w-1 rounded-full bg-text-muted/30" />
+                                <span className="text-accent font-bold uppercase tracking-tighter shadow-sm">
+                                    [{movie.sourceName}]
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
             </Link>

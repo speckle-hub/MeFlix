@@ -1,108 +1,162 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchCatalog } from "@/lib/stremioService";
+import { fetchProviderCatalog as fetchCloudStreamCatalog, type CloudStreamType, type CloudStreamItem } from "@/lib/cloudstreamService";
 import { useAddonStore } from "@/store/addonStore";
+import { useRepoStore, type RepoExtension } from "@/store/repoStore";
 import { type Movie, TRENDING_CONTENT } from "@/lib/mockData";
 
-export function useCatalog(type: string, id: string, extra?: Record<string, string>) {
-    const addons = useAddonStore(state => state.addons);
-    const [data, setData] = useState<Movie[]>([]);
+/**
+ * Hook to fetch and aggregate media from Stremio and CloudStream sources.
+ * Phase 2 Hardened Version.
+ */
+export function useCatalog(type: string, categoryId: string, extra?: Record<string, string>) {
+    // REQUIREMENT: Initialize with mock data immediately to prevent blank screen
+    const [data, setData] = useState<Movie[]>(() => {
+        const isNSFWContext = categoryId === 'nsfw';
+        return TRENDING_CONTENT.filter((m: Movie) => isNSFWContext ? m.isNSFW : !m.isNSFW);
+    });
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const extraKey = JSON.stringify(extra || {});
 
     const fetchData = useCallback(async () => {
-        // Prevent multiple simultaneous fetches for the same category
         setLoading(true);
         setError(null);
-        setData([]); // Clear existing data only when starting a fresh fetch
 
-        try {
-            const isNSFWContext = id === 'nsfw';
-            const { isDemoMode, addons: currentAddons } = useAddonStore.getState();
+        const isNSFWContext = categoryId === 'nsfw';
+        const { isDemoMode, addons: currentAddons } = useAddonStore.getState();
+        const { extensions: currentRepoExtensions } = useRepoStore.getState();
 
-            const filteredAddons = currentAddons.filter(a => {
-                if (!a.isEnabled) return false;
-                if (isNSFWContext) {
-                    return a.isNSFW === true || a.category === 'nsfw-adult' || a.category === 'nsfw-hentai';
-                } else {
-                    return !a.isNSFW && a.category !== 'nsfw-adult' && a.category !== 'nsfw-hentai';
+        // 1. Filter relevant Stremio addons
+        const filteredAddons = currentAddons.filter(a => {
+            if (!a.isEnabled) return false;
+            if (isNSFWContext) {
+                return a.isNSFW === true || a.category === 'nsfw-adult' || a.category === 'nsfw-hentai';
+            } else {
+                return !a.isNSFW && a.category !== 'nsfw-adult' && a.category !== 'nsfw-hentai';
+            }
+        });
+
+        // 2. Filter relevant CloudStream extensions
+        const enabledExtensions = currentRepoExtensions.filter((ext: RepoExtension) => {
+            if (!ext.isEnabled || ext.type !== 'cloudstream') return false;
+            if (isNSFWContext) return ext.isNSFW;
+            return !ext.isNSFW;
+        });
+
+        // 3. Define the fetch logic
+        const fetchRealContent = async (): Promise<Movie[]> => {
+            const seenIds = new Set<string>();
+            const allMetas: Movie[] = [];
+
+            // A. Fetch from Stremio (Phase 1 Baseline)
+            const stremioPromises = filteredAddons.map(async (addon) => {
+                try {
+                    const res = await fetchCatalog(addon.url, type, categoryId, extra);
+                    if (res && res.metas) {
+                        return res.metas.map(meta => ({
+                            id: meta.id,
+                            title: meta.name || "Untitled",
+                            description: meta.description || "",
+                            poster: meta.poster || "",
+                            backdrop: meta.background || "",
+                            rating: meta.imdbRating || "N/A",
+                            year: meta.year?.toString() || meta.releaseInfo || "",
+                            quality: "HD",
+                            type: meta.type as 'movie' | 'series' | 'anime' | 'manga',
+                            isNSFW: (meta as { isNSFW?: boolean }).isNSFW || false,
+                            sourceName: "Stremio"
+                        } as Movie));
+                    }
+                    return [];
+                } catch (e) {
+                    console.warn(`[useCatalog] Stremio fetch failed for ${addon.name}:`, e);
+                    return [];
                 }
             });
 
-            if (filteredAddons.length === 0) {
-                if (isDemoMode) {
-                    setData(TRENDING_CONTENT.filter(m => isNSFWContext ? m.isNSFW : !m.isNSFW));
+            // B. Fetch from CloudStream (Phase 2 Add-on)
+            const cloudStreamPromises = enabledExtensions.map(async (ext: RepoExtension) => {
+                try {
+                    // Normalize 'anime' and others to 'tv-show' if not 'movie'
+                    const fetchType: CloudStreamType = type === 'movie' ? 'movie' : 'tv-show';
+                    const items = await fetchCloudStreamCatalog(ext.id, fetchType);
+                    
+                    if (items && items.length > 0) {
+                        return items.map((item: CloudStreamItem) => ({
+                            id: item.id,
+                            title: item.title,
+                            description: item.description || "",
+                            poster: item.poster,
+                            backdrop: item.backdrop || "",
+                            rating: item.rating || "N/A",
+                            year: item.year || "",
+                            quality: "HD",
+                            type: (item.type === 'tv-show' ? (type === 'anime' ? 'anime' : 'series') : 
+                                  (item.type === 'manga' ? 'manga' : 'movie')) as 'movie' | 'series' | 'anime' | 'manga',
+                            isNSFW: ext.isNSFW,
+                            sourceName: ext.name || "CloudStream"
+                        } as Movie));
+                    }
+                    return [];
+                } catch (e) {
+                    console.warn(`[useCatalog] CloudStream fetch failed for ${ext.name}:`, e);
+                    return [];
                 }
+            });
+
+            // Execute all fetches
+            const results = await Promise.allSettled([...stremioPromises, ...cloudStreamPromises]);
+            
+            // Collect and dedupe (Option 1: Conservative ID-only)
+            results.forEach(res => {
+                if (res.status === 'fulfilled' && res.value) {
+                    res.value.forEach((item: Movie) => {
+                        if (!seenIds.has(item.id)) {
+                            seenIds.add(item.id);
+                            allMetas.push(item);
+                        }
+                    });
+                }
+            });
+
+            return allMetas;
+        };
+
+        try {
+            if (filteredAddons.length === 0 && enabledExtensions.length === 0) {
                 setLoading(false);
                 return;
             }
 
-            const seenIds = new Set<string>();
-            let allMetas: Movie[] = [];
+            const timeoutPromise = new Promise<Movie[]>((resolve) =>
+                setTimeout(() => resolve([]), 3000)
+            );
 
-            // 1. Fetch from Stremio Addons
-            const stremioPromises = filteredAddons.map(async (addon) => {
-                try {
-                    const res = await fetchCatalog(addon.url, type, id, extra);
-                    if (res && res.metas) {
-                        const newMetas = res.metas
-                            .filter(m => m && m.id && !seenIds.has(m.id))
-                            .map(meta => {
-                                seenIds.add(meta.id);
-                                return {
-                                    id: meta.id,
-                                    title: meta.name || "Unknown Title",
-                                    description: meta.description || "",
-                                    poster: meta.poster || "",
-                                    backdrop: meta.background || "",
-                                    rating: meta.imdbRating || "N/A",
-                                    year: meta.year?.toString() || meta.releaseInfo || "",
-                                    quality: "HD",
-                                    type: meta.type as any,
-                                    isNSFW: (meta as any).isNSFW || false,
-                                    sourceType: 'stremio'
-                                };
-                            });
+            const result = await Promise.race([
+                fetchRealContent(),
+                timeoutPromise
+            ]);
 
-                        // Collect results instead of updating state immediately
-                        allMetas = [...allMetas, ...newMetas];
-                    }
-                } catch (e) {
-                    console.error(`[MeFlix] Stremio fetch failed for ${addon.name}:`, e);
-                }
-            });
-
-            await Promise.allSettled(stremioPromises);
-
-            // Final state update with all collected data
-            if (allMetas.length > 0) {
-                setData(allMetas);
-            }
-
-            if (allMetas.length === 0 || isDemoMode) {
-                // In demo mode or if no results found, add trending content
-                const filteredTrending = TRENDING_CONTENT.filter(m => isNSFWContext ? m.isNSFW : !m.isNSFW);
-                setData(prev => {
-                    const existingIds = new Set(prev.map(p => p.id));
-                    const toAdd = filteredTrending.filter(m => !existingIds.has(m.id));
-                    return [...prev, ...toAdd];
-                });
+            if (result && result.length > 0) {
+                setData(result);
+            } else if (isDemoMode) {
+                const filteredTrending = TRENDING_CONTENT.filter((m: Movie) => isNSFWContext ? m.isNSFW : !m.isNSFW);
+                setData(filteredTrending);
             }
         } catch (err) {
-            console.error("[MeFlix] useCatalog fatal error:", err);
+            console.error("[useCatalog] Fetching Error:", err);
             setError(err instanceof Error ? err.message : "Failed to load content");
-            setData(TRENDING_CONTENT.filter(m => id === 'nsfw' ? m.isNSFW : !m.isNSFW));
         } finally {
             setLoading(false);
         }
-    }, [type, id, extraKey]);
+    }, [type, categoryId, extraKey]);
 
     useEffect(() => {
-        let isMounted = true;
-        if (isMounted) fetchData();
-        return () => { isMounted = false; };
+        fetchData();
     }, [fetchData]);
 
-    return { data, loading, error, refetch: fetchData };
+    return { data, loading, error, refresh: fetchData };
 }

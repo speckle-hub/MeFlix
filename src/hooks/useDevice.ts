@@ -9,18 +9,24 @@ export function useDevice() {
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
-        setIsMounted(true);
         const mobileQuery = window.matchMedia("(max-width: 767px)");
         const tabletQuery = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
         const desktopQuery = window.matchMedia("(min-width: 1024px)");
 
         const updateDevice = () => {
-            setIsMobile(mobileQuery.matches);
-            setIsTablet(tabletQuery.matches);
-            setIsDesktop(desktopQuery.matches);
+            const mobile = mobileQuery.matches;
+            const tablet = tabletQuery.matches;
+            const desktop = desktopQuery.matches;
+
+            setIsMobile(mobile);
+            setIsTablet(tablet);
+            setIsDesktop(desktop);
         };
 
-        updateDevice();
+        setTimeout(() => {
+            updateDevice();
+            setIsMounted(true);
+        }, 0);
 
         mobileQuery.addEventListener("change", updateDevice);
         tabletQuery.addEventListener("change", updateDevice);
